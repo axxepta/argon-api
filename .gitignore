@@ -1,0 +1,8 @@
+.logs
+.settings
+target
+data
+data/.logs
+/bin/
+shiro-res
+/logs
