@@ -2,8 +2,8 @@ package de.axxepta.server.embedded.interfaces;
 
 public interface IServerEmbedded {
 	
-	public String startServer();
+	public void startServer() throws Exception;
 	
-	public String stopServer();
+	public void stopServer() throws Exception;
 	
 }

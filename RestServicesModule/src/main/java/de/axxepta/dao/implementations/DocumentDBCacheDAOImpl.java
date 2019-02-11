@@ -18,17 +18,17 @@ import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
-import javax.ws.rs.core.Context;
 
 import org.apache.log4j.Logger;
 import org.basex.core.BaseXException;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.jetbrains.annotations.NotNull;
 import org.jvnet.hk2.annotations.Service;
 
 import de.axxepta.basex.RunDirectCommands;
 import de.axxepta.dao.interfaces.IDocumentCacheDAO;
 import de.axxepta.dao.interfaces.IDocumentDAO;
+import de.axxepta.rest.configuration.BuildResourceBinderReader;
+import de.axxepta.rest.configuration.ResourceBundleReader;
 import jetbrains.exodus.ByteIterable;
 import jetbrains.exodus.bindings.CompressedUnsignedLongArrayByteIterable;
 import jetbrains.exodus.bindings.StringBinding;
@@ -54,8 +54,7 @@ public class DocumentDBCacheDAOImpl implements IDocumentCacheDAO {
 
 	private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
-	@Context
-	private ResourceConfig resourceConfig;
+	private ResourceBundleReader resourceBundleReader;
 
 	private String commonDatabaseName;
 
@@ -104,8 +103,8 @@ public class DocumentDBCacheDAOImpl implements IDocumentCacheDAO {
 		}
 	}
 
-	private void saveInCommonDatabase(File file) {
-		documentDAO.uploadXMLDocument(file, false, commonDatabaseName);
+	private int saveInCommonDatabase(File file) {
+		return documentDAO.uploadXMLDocument(file, false, commonDatabaseName);
 	}
 
 	public DocumentDBCacheDAOImpl() {
@@ -120,10 +119,19 @@ public class DocumentDBCacheDAOImpl implements IDocumentCacheDAO {
 	private void initTransfer() {
 		scheduledExecutorService.scheduleAtFixedRate(transferRunnable, 20, 30, TimeUnit.MINUTES);
 
-		commonDatabaseName = (String) resourceConfig.getProperty("common_dabase_name");
-
-		if (commonDatabaseName == null || commonDatabaseName.isEmpty())
-			commonDatabaseName = "common_database";
+		resourceBundleReader = new BuildResourceBinderReader("ArgonServerConfig").getBundlerReader();
+		
+		try {
+			commonDatabaseName = (String) resourceBundleReader.getValueAsString("common-database-name");
+		}
+		catch(Exception e){
+			LOG.error("common-database-name property cannot be found");
+			commonDatabaseName = "test-base";
+		}
+		
+		LOG.info("Read common database name from configuration file");
+		
+		
 
 		if (!runDirectCommands.existDatabase(commonDatabaseName))
 			try {
@@ -133,6 +141,21 @@ public class DocumentDBCacheDAOImpl implements IDocumentCacheDAO {
 			}
 	}
 
+	@Override
+	public Boolean setDatabaseName(String databaseName) {
+		
+		if(this.commonDatabaseName.equals(databaseName))
+			return true;
+		if (!runDirectCommands.existDatabase(databaseName))
+			return false;
+
+		transferFiles();
+
+		this.commonDatabaseName = databaseName;
+
+		return true;
+	}
+	
 	@Override
 	public List<String> getSavedFilesName() {
 		List<String> listFileNames = new ArrayList<>();

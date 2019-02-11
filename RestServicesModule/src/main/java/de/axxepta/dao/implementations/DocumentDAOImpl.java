@@ -22,8 +22,10 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
+import org.apache.maven.shared.utils.io.FileUtils;
 import org.basex.core.BaseXException;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
@@ -224,6 +226,17 @@ public class DocumentDAOImpl implements IDocumentDAO {
 
 		WebTarget webTarget = client.target(databaseRESTfulURL);
 
+		String newName = getFileNameWithSHA(file);
+		if(newName == null)
+			return 500;
+		
+		File newFile = new File(getFileNameWithSHA(file));
+		
+		boolean succes = file.renameTo(newFile);
+		
+		if(!succes)
+			return 500;
+		
 		Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN_TYPE);
 		Response response = invocationBuilder.put(Entity.xml(file));
 
@@ -234,6 +247,18 @@ public class DocumentDAOImpl implements IDocumentDAO {
 		return code;
 	}
 
+	//will be useful in document versioning
+	private String getFileNameWithSHA(File file) {
+		String fileName = file.getName();
+		String content;
+		try {
+			content = FileUtils.fileRead(file);
+		} catch (IOException e) {
+			return null;
+		}
+		return fileName + DigestUtils.sha256(content);
+	}
+	
 	@Override
 	public int deleteDocument(String fileName, String databaseName) {
 

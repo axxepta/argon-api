@@ -9,7 +9,8 @@ public class MeterConfigBinder extends AbstractBinder {
 
 	@Override
 	protected void configure() {
-		bindFactory(MeterConfigFactory.class).to(Meter.class).proxy(true).proxyForSameScope(false).in(RequestScoped.class);		
+		bindFactory(MeterConfigFactory.class).to(Meter.class).proxy(true).proxyForSameScope(false)
+				.in(RequestScoped.class);		
 	}
 
 }

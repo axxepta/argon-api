@@ -119,7 +119,7 @@ public class DatabasesResource{
 		}
 	}
 
-	@Operation(summary = "Delete database", description = "Drop a database", method = "DELETE", operationId = "#7_4")
+	@Operation(summary = "Delete database", description = "Drop a database", method = "DELETE", operationId = "#3_4")
 	@ApiResponses({ @ApiResponse(responseCode = "200", description = "delete database with success"),
 			@ApiResponse(responseCode = "400", description = "name of database is incorrect"),
 			@ApiResponse(responseCode = "409", description = "innexistent database"),

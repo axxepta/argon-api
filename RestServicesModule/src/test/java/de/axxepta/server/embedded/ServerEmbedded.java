@@ -1,65 +1,85 @@
 package de.axxepta.server.embedded;
 
-import javax.inject.Singleton;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
-import org.glassfish.jersey.server.ServerProperties;
-import org.jvnet.hk2.annotations.Service;
+import org.eclipse.jetty.util.resource.Resource;
+import org.eclipse.jetty.webapp.Configuration;
+import org.glassfish.hk2.api.ServiceLocator;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.servlet.ServletContainer;
 
 import de.axxepta.configuration.ArgonServerResourceConfig;
-import de.axxepta.resources.TestResource;
+import de.axxepta.configuration.InitResourceConfig;
 import de.axxepta.server.embedded.interfaces.IServerEmbedded;
 
-@Service(name = "JettyServerEmbedded")
-@Singleton
+
 public class ServerEmbedded implements IServerEmbedded{
 
 	private int port;
 
-	private Server jettyServerEmbedded;
-
-	public ServerEmbedded(int port) {
+	public Server jettyServerEmbedded;
+	private String path;
+	private Map<String, String> initParametersMap;
+	
+	public ServerEmbedded(int port, String path, Map<String, String> initParametersMap) {
 		this.port = port;
+		this.path = path;
+		this.initParametersMap = initParametersMap;
 	}
 	
-	public String startServer() {
+	public void startServer() throws Exception {
+		/*
+		ResourceConfig config = new ResourceConfig();
+		InitResourceConfig.initRegisterMeterBinder(config);
+		
+		ServletContainer servletContainer = new ServletContainer(config);
+		*/
+		
 		ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
-		context.setContextPath("/");
+		context.setContextPath("/" + path);
 
 		jettyServerEmbedded = new Server(port);
+		
+		Configuration.ClassList classlist = Configuration.ClassList
+		        .setServerDefault(jettyServerEmbedded);
+		 
+		classlist.addAfter("org.eclipse.jetty.webapp.FragmentConfiguration",
+		        "org.eclipse.jetty.plus.webapp.EnvConfiguration",
+		        "org.eclipse.jetty.plus.webapp.PlusConfiguration");
+		// Enable annotation/bytecode scanning and ServletContainerInitializer usages
+		classlist.addBefore(
+		        "org.eclipse.jetty.webapp.JettyWebXmlConfiguration",
+		        "org.eclipse.jetty.annotations.AnnotationConfiguration");
 		jettyServerEmbedded.setHandler(context);
 
 		ServletHolder jerseyServlet = context.addServlet(org.glassfish.jersey.servlet.ServletContainer.class, "/*");
+		
+		//context.addServlet(jerseyServletApp, "/*");
+		
 		jerseyServlet.setInitOrder(0);
 		jerseyServlet.setDisplayName("Test service");
 		
-		 jerseyServlet.setInitParameter(
-		 "com.sun.jersey.config.property.resourceConfigClass",
-		 ArgonServerResourceConfig.class.getCanonicalName());
+		 if(initParametersMap != null) {
+			 for(Entry<String, String> initParam : initParametersMap.entrySet()) {
+				 jerseyServlet.setInitParameter(initParam.getKey(), initParam.getValue());
+			 }
+		 }
 		
-		//jerseyServlet.setInitParameter(ServerProperties.PROVIDER_PACKAGES, "de.axxepta.resources");
-
-		jerseyServlet.setInitParameter("com.sun.jersey.api.json.POJOMappingFeature", "true");
-
-		try {
-			jettyServerEmbedded.start();
-		} catch (Exception e) {
-			return e.getMessage();
-		}
-
-		return null;
+		jettyServerEmbedded.start();
+		jettyServerEmbedded.join();
 	}
 
-	public String stopServer() {
-		if (jettyServerEmbedded != null && jettyServerEmbedded.isStarted()) {
-			try {
-				jettyServerEmbedded.stop();
-			} catch (Exception e) {
-				return e.getMessage();
-			}
+	public void stopServer() throws Exception {
+		System.out.println("Server URI was " + jettyServerEmbedded.getURI());
+		
+		if (jettyServerEmbedded != null && jettyServerEmbedded.isStarted()) {	
+				jettyServerEmbedded.stop();			
 		}
-		return null;
 	}
 }

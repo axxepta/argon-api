@@ -11,15 +11,18 @@ import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
@@ -29,6 +32,7 @@ import org.codehaus.plexus.util.FileUtils;
 
 import com.codahale.metrics.Meter;
 
+import de.axxepta.dao.interfaces.IDocumentCacheDAO;
 import de.axxepta.exceptions.ResponseException;
 import de.axxepta.models.FileDescriptionModel;
 import de.axxepta.models.FileDisplayModel;
@@ -49,6 +53,13 @@ public class DocumentsResource {
 	@Inject
 	@Named("FileServiceImplementation")
 	private IFileResourceService fileService;
+
+	@Inject
+	@Named("DocumentMemoryCacheDAO")
+	private IDocumentCacheDAO documentCacheDAO;
+	
+	@Context
+	private HttpServletRequest servletRequest;
 
 	@Operation(summary = "List uploaded files", description = "Provide a map of uploaded files", method = "GET", operationId = "#4_1")
 	@ApiResponses({ @ApiResponse(responseCode = "200", description = "retrieve of json of uploaded files"),
@@ -78,7 +89,39 @@ public class DocumentsResource {
 		return Response.status(Status.OK).entity(filesResponseMap).build();
 	}
 
-	@Operation(summary = "Check if file exist", description = "Retrieve head for an repository", method = "GET", operationId = "#4_2")
+	@Operation(summary = "set other name for used BaseX database", description = "Retrieve head for an repository", method = "PUT", operationId = "#4_2")
+	@ApiResponses({ @ApiResponse(responseCode = "200", description = "change database"),
+			@ApiResponse(responseCode = "406", description = "request is do it from address other than local address"),
+			@ApiResponse(responseCode = "409", description = "not exist database with name wanted") })
+	
+	@PUT
+	@Path("set-databaseName")
+	public Response setDatabaseName(@QueryParam("name") String databaseName) {
+		metricRegistry.mark();
+		
+		if(!servletRequest.getRemoteAddr().equals("127.0.0.1")) {
+			LOG.error("The service has been attempted to be runned by " + servletRequest.getRemoteAddr());
+			return Response.status(Status.NOT_ACCEPTABLE).entity("That service must be used only locally").build();
+		}
+		
+		LOG.info("Trying to set new database with name " + databaseName);
+		
+		Boolean r = documentCacheDAO.setDatabaseName(databaseName);
+		
+		if(r == null) {
+			return Response.status(Status.ACCEPTED).entity("Database with name " + databaseName + " is already setted").build();
+		}
+		
+		if(!r) {
+			return Response.status(Status.CONFLICT).entity("Database with name "  + databaseName + " not exists").build();
+		}
+		else {
+			LOG.info("Database name is changed in " + databaseName);
+			return Response.status(Status.OK).entity("New database used have name "  + databaseName).build();
+		}
+	}
+
+	@Operation(summary = "Check if file exist", description = "Retrieve head for an repository", method = "GET", operationId = "#4_3")
 	@ApiResponses({ @ApiResponse(responseCode = "200", description = "file exist"),
 			@ApiResponse(responseCode = "202", description = "file not exist"),
 			@ApiResponse(responseCode = "400", description = "name of file cannot be valided") })
@@ -99,7 +142,7 @@ public class DocumentsResource {
 			return Response.status(Status.ACCEPTED).entity("File  with name " + fileName + " not exist").build();
 	}
 
-	@Operation(summary = "Upload file", description = "Upload file as an temporal one", method = "POST", operationId = "#4_3")
+	@Operation(summary = "Upload file", description = "Upload file as an temporal one", method = "POST", operationId = "#4_4")
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "upload file succes and return URL for temporal file and his type in JSON"),
 			@ApiResponse(responseCode = "400", description = "at least one parameter in the request is missing"),
@@ -133,7 +176,7 @@ public class DocumentsResource {
 		return Response.ok(fileDescription).build();
 	}
 
-	@Operation(summary = "Delete a file", description = "Delete an file from uploaded set", method = "DELETE", operationId = "#4_4")
+	@Operation(summary = "Delete a file", description = "Delete an file from uploaded set", method = "DELETE", operationId = "#4_5")
 	@ApiResponses({ @ApiResponse(responseCode = "200", description = "the file was successfully deleted"),
 			@ApiResponse(responseCode = "202", description = "file not exist"),
 			@ApiResponse(responseCode = "409", description = "name of file cannot be validated") })
@@ -156,7 +199,7 @@ public class DocumentsResource {
 					.build();
 	}
 
-	@Operation(summary = "Retrieve file", description = "Retrieve file as an binary one", method = "GET", operationId = "#4_5")
+	@Operation(summary = "Retrieve file", description = "Retrieve file as an binary one", method = "GET", operationId = "#4_6")
 	@ApiResponses({ @ApiResponse(responseCode = "200", description = "return file content"),
 			@ApiResponse(responseCode = "409", description = "name of file cannot be validated") })
 	@GET
@@ -177,4 +220,5 @@ public class DocumentsResource {
 		return Response.ok(boStream, "image/png").header("content-disposition", "attachment; filename = " + fileName)
 				.build();
 	}
+	
 }

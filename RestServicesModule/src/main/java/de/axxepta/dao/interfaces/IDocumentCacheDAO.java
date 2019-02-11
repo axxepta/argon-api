@@ -6,7 +6,9 @@ import org.jvnet.hk2.annotations.Contract;
 
 @Contract
 public interface IDocumentCacheDAO {
-
+	
+	public Boolean setDatabaseName(String databaseName);
+	
 	public List<String> getSavedFilesName();
 	
 	public String getContentFile(String fileName);

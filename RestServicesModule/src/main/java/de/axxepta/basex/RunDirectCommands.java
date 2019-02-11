@@ -61,8 +61,7 @@ public class RunDirectCommands {
 		
 		return numberElements;
 	}
-	
-	
+		
 	public List<String> listElements(String databaseName) throws BaseXException{
 		LOG.info("List document for database " + databaseName);
 		new Open(databaseName).execute(ctx);
@@ -97,7 +96,7 @@ public class RunDirectCommands {
 		return infos;
 	}
 
-	public String showExistingDatabase() throws BaseXException {
+	public String showExistingDatabases() throws BaseXException {
 		LOG.info("show infos about available databases");
 		String list = new org.basex.core.cmd.List().execute(ctx);
 		return list;

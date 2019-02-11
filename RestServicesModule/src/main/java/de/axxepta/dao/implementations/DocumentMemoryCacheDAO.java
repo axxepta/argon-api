@@ -1,5 +1,6 @@
 package de.axxepta.dao.implementations;
 
+import java.util.Arrays;
 import java.util.List;
 
 import javax.annotation.PostConstruct;
@@ -7,13 +8,13 @@ import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
-import javax.ws.rs.core.Context;
 
 import org.apache.log4j.Logger;
-import org.glassfish.jersey.server.ResourceConfig;
 import org.jvnet.hk2.annotations.Service;
 
 import de.axxepta.dao.interfaces.IDocumentCacheDAO;
+import de.axxepta.rest.configuration.BuildResourceBinderReader;
+import de.axxepta.rest.configuration.ResourceBundleReader;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
@@ -24,43 +25,62 @@ import net.sf.ehcache.config.CacheConfiguration;
 public class DocumentMemoryCacheDAO implements IDocumentCacheDAO {
 
 	private Cache cache;
-	
+
 	private static final Logger LOG = Logger.getLogger(DocumentMemoryCacheDAO.class);
-	
+
 	@Inject
 	@Named("DocumentDatabaseCacheDAO")
-	IDocumentCacheDAO documentDatabaseDAO;
-	
-	@Context
-	private ResourceConfig resourceConfig;
+	private IDocumentCacheDAO documentDatabaseCacheDAO;
+
+	private ResourceBundleReader resourceBundleReader;
 	
 	@PostConstruct
 	private void initCacheDAO() {
-		cache = CacheManager.getInstance().getCache("documents");
+		
+		CacheManager cacheManager = CacheManager.getInstance();
+		cacheManager.addCache("documents");
+		
+		LOG.info("Caches " + Arrays.toString(cacheManager.getCacheNames()));
+		
+		if(!cacheManager.cacheExists("documents"))
+			LOG.error("Cache documents not exists yet");
+		else
+			LOG.info("Cache documents was created");
+		
+		cache = cacheManager.getCache("documents");
+				
+		resourceBundleReader = new BuildResourceBinderReader("ArgonServerConfig").getBundlerReader();
 		configureCache();
 	}
-	
+
 	private void configureCache() {
 		CacheConfiguration config = cache.getCacheConfiguration();
 		config.setEternal(false);
 		int maxElements = 1000;
 		int timeLive = 100;
+
+		LOG.info("Available keys " + resourceBundleReader.getKeys());
+		
 		try {
-			maxElements = Integer.parseUnsignedInt((String) resourceConfig.getProperty("cachemax-elements-in-memory"));
-		} catch (NumberFormatException e) {
-			LOG.error((String) resourceConfig.getProperty("cache-max-elements-in-memory") + "is not a number");
+			maxElements = Integer
+					.parseUnsignedInt((String) resourceBundleReader.getValueAsString("cache-max-elements-in-memory"));
+		} catch (Exception e) {
+			LOG.error("cachemax-elements-in-memory wasn't found or isn't a number");
 		}
 
 		try {
-			timeLive = Integer.parseUnsignedInt((String) resourceConfig.getProperty("cache-seconds-time-to-live"));
-		} catch (NumberFormatException e) {
-			LOG.error((String) resourceConfig.getProperty("cache-seconds-time-to-live") + "is not a number");
+			timeLive = Integer
+					.parseUnsignedInt((String) resourceBundleReader.getValueAsString("cache-seconds-time-to-live"));
+		} catch (Exception e) {
+			LOG.error("cache-seconds-time-to-live wasn't found or isn't a number");
 		}
+
+		LOG.info("Configure cache in memory : max elements " + maxElements + ", time live " + timeLive);
 
 		config.setMaxElementsInMemory(maxElements);
 		config.setTimeToLiveSeconds(timeLive);
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public List<String> getSavedFilesName() {
@@ -68,50 +88,54 @@ public class DocumentMemoryCacheDAO implements IDocumentCacheDAO {
 	}
 
 	@Override
+	public Boolean setDatabaseName(String databaseName) {
+		return documentDatabaseCacheDAO.setDatabaseName(databaseName);
+	}
+
+	@Override
 	public String getContentFile(String fileName) {
-		if(cache.isKeyInCache(fileName))
+		if (cache.isKeyInCache(fileName))
 			return (String) cache.get(fileName).getValue();
 		else
-			return documentDatabaseDAO.getContentFile(fileName);
+			return documentDatabaseCacheDAO.getContentFile(fileName);
 	}
 
 	@Override
 	public boolean save(String fileName, String content) {
 		Element element = new Element(fileName, content);
 		cache.put(element);
-		return documentDatabaseDAO.save(fileName, content);	
+		return documentDatabaseCacheDAO.save(fileName, content);
 	}
 
 	@Override
 	public boolean update(String fileName, String content) {
-		
+
 		LOG.info("Update " + fileName);
-		
-		if( cache.isKeyInCache(fileName) ) {
+
+		if (cache.isKeyInCache(fileName)) {
 			Element element = new Element(fileName, content);
 			cache.put(element);
-			return documentDatabaseDAO.update(fileName, content);
-		}
-		else return false;
-			
+			return documentDatabaseCacheDAO.update(fileName, content);
+		} else
+			return false;
+
 	}
 
 	@Override
 	public boolean delete(String fileName) {
-		
+
 		LOG.info("Delete " + fileName);
-		
+
 		boolean response;
-		if( cache.isKeyInCache(fileName) ) {
+		if (cache.isKeyInCache(fileName)) {
 			response = cache.remove(fileName);
-			response = documentDatabaseDAO.delete(fileName);
-		}
-		else 
+			response = documentDatabaseCacheDAO.delete(fileName);
+		} else
 			response = false;
-		
+
 		return response;
 	}
-	
+
 	@PreDestroy
 	private void shutdownService() {
 		CacheManager.getInstance().shutdown();

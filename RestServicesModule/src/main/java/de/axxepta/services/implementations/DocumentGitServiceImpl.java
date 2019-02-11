@@ -17,6 +17,8 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Singleton;
+import javax.ws.rs.core.Application;
+import javax.ws.rs.core.Context;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -35,6 +37,7 @@ import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.jvnet.hk2.annotations.Service;
 
 import com.google.common.io.Files;
@@ -52,6 +55,11 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 
 	private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
+	@Context
+	private Application application;
+
+	private int timeDifference;
+	
 	private Runnable clearRunnable = new Runnable() {
 		public void run() {
 			long now = Instant.now().toEpochMilli();
@@ -59,13 +67,13 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 			int numberDeletedDir = 0;
 			for (Entry<String, Git> entry : gitCloneMap.entrySet()) {
 				File dirGit = entry.getValue().getRepository().getDirectory();
-				if (now - 1000000 > dirGit.lastModified()) {
+				if (now - timeDifference > dirGit.lastModified()) {
 					try {
-						FileUtils.forceDelete(dirGit);
+						FileUtils.forceDelete(dirGit.getParentFile());
 						gitCloneMap.remove(entry.getKey());
 						numberDeletedDir++;
 					} catch (IOException e) {
-						LOG.error("Directory " + dirGit.getAbsolutePath() + " cannot be deleted, with exception "
+						LOG.error("Directory " + dirGit.getParentFile().getAbsolutePath() + " cannot be deleted, with exception "
 								+ e.getMessage());
 					}
 				}
@@ -77,8 +85,44 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 
 	@PostConstruct
 	private void initService() {
-		gitCloneMap = new HashMap <>();
-		scheduledExecutorService.scheduleAtFixedRate(clearRunnable, 3, 8, TimeUnit.MINUTES);
+
+		ResourceConfig resourceConfiguration = ResourceConfig.forApplication(application);
+
+		String startTimeDelete = (String) resourceConfiguration.getProperty("start-time-delete-Git-clone");
+		String cicleTimeDelete = (String) resourceConfiguration.getProperty("cicle-time-delete-Git-clone");
+		String timeDifferenceDelete = (String) resourceConfiguration.getProperty("difference-time-delete-Git-clone");
+		int startTime = 3;
+		if (startTimeDelete != null && !startTimeDelete.isEmpty()) {
+
+			try {
+				startTime = Integer.parseInt(startTimeDelete);
+			} catch (NumberFormatException e) {
+				LOG.error(startTimeDelete + " is not a number");
+			}
+		}
+
+		int cicleTime = 10;
+		if (cicleTimeDelete != null && !cicleTimeDelete.isEmpty()) {
+			try {
+				Integer.parseInt(cicleTimeDelete);
+			} catch (NumberFormatException e) {
+				LOG.error(cicleTimeDelete + " is not a number");
+			}
+		}
+		
+		timeDifference = 100000;
+		
+		if (timeDifferenceDelete!= null && !timeDifferenceDelete.isEmpty()) {
+
+			try {
+				timeDifference = Integer.parseInt(startTimeDelete);
+			} catch (NumberFormatException e) {
+				LOG.error(startTimeDelete + " is not a number");
+			}
+		}
+		
+		gitCloneMap = new HashMap<>();
+		scheduledExecutorService.scheduleAtFixedRate(clearRunnable, startTime, cicleTime, TimeUnit.MINUTES);
 	}
 
 	@Override
@@ -112,7 +156,7 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 
 		if (repository == null)
 			return null;
-		
+
 		List<String> listDirs = new ArrayList<>();
 		List<String> listFiles = new ArrayList<>();
 		try {
@@ -123,7 +167,7 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 			TreeWalk treeWalk = new TreeWalk(repository);
 			treeWalk.addTree(tree);
 			treeWalk.setRecursive(false);
-			
+
 			while (treeWalk.next()) {
 				if (treeWalk.isSubtree()) {
 					listDirs.add(treeWalk.getPathString());
@@ -132,11 +176,11 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 					listFiles.add(treeWalk.getPathString());
 				}
 			}
-			
+
 			git.close();
 			walk.close();
 			treeWalk.close();
-			
+
 		} catch (IOException e) {
 			LOG.error(e.getMessage());
 			return null;
@@ -147,7 +191,7 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 
 	@Override
 	public byte[] getDocumentFromRepository(String gitURL, String fileName, UserAuthModel userAuth) {
-		
+
 		Git git = getGitFromURL(gitURL, userAuth);
 		if (git == null)
 			return null;
@@ -182,7 +226,7 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 			LOG.error("Directory " + directoryOnGit + " not exists");
 			return false;
 		}
-		
+
 		try {
 			FileUtils.copyFileToDirectory(localFile, dirCommit);
 		} catch (IOException e) {
@@ -195,8 +239,8 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 			LOG.error("The file cannot be added to local repository " + e.getMessage());
 			return false;
 		}
-		
-		//commit
+
+		// commit
 		try {
 			git.commit().setOnly(localFile.getName()).setMessage(commitMessage).call();
 		} catch (GitAPIException e) {
@@ -205,7 +249,7 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 		}
 
 		// push on local git
-		
+
 		RemoteAddCommand remoteAddCommand = git.remoteAdd();
 		String branchName;
 		try {
@@ -283,9 +327,9 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 		Git git = null;
 		if (!gitCloneMap.containsKey(url)) {
 			File tempDirClone = null;
-			
-			tempDirClone =  Files.createTempDir();		
-			
+
+			tempDirClone = Files.createTempDir();
+
 			long start = System.nanoTime();
 			try {
 				git = Git.cloneRepository().setURI(url).setCredentialsProvider(credentials).setDirectory(tempDirClone)
@@ -312,11 +356,11 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 		for (Entry<String, Git> entry : gitCloneMap.entrySet()) {
 			File dirGit = entry.getValue().getRepository().getDirectory();
 			try {
-				FileUtils.forceDelete(dirGit);
+				FileUtils.forceDelete(dirGit.getParentFile());
 				LOG.info(dirGit + " was succesfuly deleted");
 			} catch (IOException e) {
-				LOG.error("Directory " + dirGit.getAbsolutePath() + " cannot be deleted, with exception "
-						+ e.getMessage() + " in shutdown method");
+				LOG.error("Directory " + dirGit.getParentFile().getAbsolutePath()
+						+ " cannot be deleted, with exception " + e.getMessage() + " in shutdown method");
 			}
 		}
 	}

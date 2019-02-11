@@ -1,0 +1,3 @@
+[submodule "OxygenWebAuthorModule"]
+	path = OxygenWebAuthorModule
+	url = https://github.com/axxepta/argon-oxy-web

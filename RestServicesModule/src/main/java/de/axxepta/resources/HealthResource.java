@@ -119,7 +119,7 @@ public class HealthResource{
 		return Response.status(Status.OK).entity(mapResponse).build();
 	}
 
-	@Operation(summary = "Check database", description = "Check if xbase resource is functional", method = "GET", operationId = "#2_9")
+	@Operation(summary = "Check database", description = "Check if BaseX resource is functional", method = "GET", operationId = "#2_9")
 	@ApiResponses({ @ApiResponse(responseCode = "200", description = "report if dabase is functional"),
 			@ApiResponse(responseCode = "400", description = "error in transmited resource name in get request") })
 	@Path("check-database")

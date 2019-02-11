@@ -7,9 +7,11 @@ import org.jvnet.hk2.annotations.Contract;
 @Contract
 public interface IDatabaseResourceService {
 	
-	public boolean uploadFileToDatabase(File file, String database);
+	public Boolean changeDatabaseName(String newDatabaseName);
 	
-	public boolean deleteFileFromDatabase(File file, String database);
+	public boolean uploadFileToDatabase(File file);
+	
+	public boolean deleteFileFromDatabase(File file);
 	
 	public boolean testDB(String resourceName);
 	

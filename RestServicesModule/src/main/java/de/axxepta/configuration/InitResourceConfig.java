@@ -34,7 +34,7 @@ public class InitResourceConfig {
 	}
 	
 	public static void initSwaggerProvider(ResourceConfig config) {
-		LOG.info("OpenApi for Swagger is initialied");
+		LOG.info("OpenApi for Swagger is initialized");
 		ResourceConfig resourceConfig = ResourceConfig.forApplication(config);
 		String value = (String) resourceConfig.getProperty("activation-swagger");
 		if(value == null || value.isEmpty()) {

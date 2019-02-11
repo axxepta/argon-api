@@ -27,7 +27,6 @@ import javax.servlet.ServletContext;
 import javax.ws.rs.core.Context;
 import javax.xml.bind.DatatypeConverter;
 
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
@@ -122,10 +121,6 @@ public class FileResourceServiceImpl implements IFileResourceService {
 			LOG.error(e.getClass() + ": " + e.getMessage());
 			return null;
 		}
-	}
-
-	private String getFileNameWithSHA(String fileName, String content) {
-		return fileName + DigestUtils.sha256(content);
 	}
 	
 	@Override

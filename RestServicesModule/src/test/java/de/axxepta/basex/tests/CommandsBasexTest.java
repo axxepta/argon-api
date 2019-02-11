@@ -1,6 +1,7 @@
 package de.axxepta.basex.tests;
 
 import java.io.IOException;
+import java.net.Socket;
 
 import org.basex.BaseXServer;
 import org.basex.api.client.ClientSession;
@@ -19,6 +20,7 @@ import static org.junit.Assert.fail;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class CommandsBasexTest {
 
+	private static final int PORT = 1984; //default port
 	private BaseXServer server;
 	private ClientSession session;
 
@@ -28,17 +30,23 @@ public class CommandsBasexTest {
 
 	@Before
 	public void initServer() {
-		try {
-			server = new BaseXServer();
-
-		} catch (IOException e1) {
-			fail("BaseX object cannot be created");
+		try (Socket ignored = new Socket("localhost", PORT)) {
+			fail("BaseX object cannot be created, port " + PORT + " occupied");
+		}
+		catch(IOException e) {
+			
 		}
 
+		try {
+			server = new BaseXServer();
+		} catch (IOException e) {
+			fail("Exception server " + e.getMessage());
+		}
+		
 		System.out.println("\n* Create a client session.");
 
 		try {
-			session = new ClientSession("localhost", 1984, "admin", "admin");
+			session = new ClientSession("localhost", PORT, "admin", "admin");
 		} catch (IOException e) {
 			fail("Client cannot be created");
 		}
@@ -60,7 +68,7 @@ public class CommandsBasexTest {
 		} catch (BaseXException e) {
 			fail("Database cannot be created " + e.getMessage());
 		}
-		
+
 		try {
 			runDirectCommands.openDatabase(DATABASE_NAME);
 		} catch (BaseXException e) {
@@ -94,14 +102,15 @@ public class CommandsBasexTest {
 	@After
 	public void stop() {
 		runDirectCommands.close();
-		
+
 		try {
 			session.close();
 		} catch (IOException e) {
 			fail("Client session cannot be stopped " + e.getMessage());
 		}
 
-		server.stop();	
+		if (BaseXServer.ping("localhost", PORT))
+			server.stop();
 	}
-	
+
 }

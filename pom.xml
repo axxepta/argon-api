@@ -14,6 +14,7 @@
 		<module>RestServicesModule</module>
 
 		<module>OxygenWebAuthorModule</module>
+
 	</modules>
 
 	<properties>
@@ -22,7 +23,8 @@
 		<compileSource>10</compileSource>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<jetty.version>9.4.14.v20181114</jetty.version>
+		<jetty.version>9.4.12.v20180830</jetty.version>
+		<!--<jetty.version>9.4.14.v20181114</jetty.version> -->
 
 		<artifact.id.property>argon-server</artifact.id.property>
 		<slf4j.version>1.8.0-beta2</slf4j.version>
@@ -82,9 +84,15 @@
 
 		<dependency>
 			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-annotations</artifactId>
+			<version>${jetty.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-util</artifactId>
 			<version>${jetty.version}</version>
 		</dependency>
+
 		<dependency>
 			<groupId>log4j</groupId>
 			<artifactId>log4j</artifactId>
@@ -113,7 +121,7 @@
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-ext</artifactId>
-			<version>${slf4j.version}</version>
+			<version>1.7.25</version>
 		</dependency>
 
 		<dependency>
@@ -206,7 +214,17 @@
 					</dependency>
 				</dependencies>
 			</plugin>
-
+			
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>1.4.1</version>
+				<configuration>
+					<rules>
+						<dependencyConvergence />
+					</rules>
+				</configuration>
+			</plugin>
 			
 			<plugin>
 				<groupId>org.eclipse.jetty</groupId>
@@ -214,14 +232,14 @@
 				<version>${jetty.version}</version>
 
 				<configuration>
-					
+
 					<webAppConfig
 						implementation="org.eclipse.jetty.maven.plugin.JettyWebAppContext">
 						<webInfIncludeJarPattern>^$</webInfIncludeJarPattern>
 						<containerIncludeJarPattern>^$</containerIncludeJarPattern>
 					</webAppConfig>
 					<jettyXml>webapp/WEB-INF/jetty.xml</jettyXml>
-								
+
 					<stopKey>keyToStopJetty</stopKey>
 					<stopPort>8985</stopPort>
 
@@ -267,52 +285,82 @@
 								log.info('user dir:{}',"${user.dir}")
 								log.info('Base dir:{}',"${basedir}")
 								log.info('initial project artifact id:{}',"${artifact.id.property}")
-								final FileTreeBuilder treeBuilder=new FileTreeBuilder(new File("."))
-								def logFolder = new File('logs')
-								if(!logFolder.exists()){
-									log.info('logs folder will be created')
-									treeBuilder.dir('logs')
+								final FileTreeBuilder treeBuilder = new FileTreeBuilder(new File("."))
+
+								def xodusFolderRestModule = new File('RestServicesModule' + File.separator + 'xodus-db')
+								def folderOxygenModule = new File('OxygenWebAuthorModule')
+								if(!xodusFolderRestModule.exists()){
+									log.info('xodus-db folder will be created in RestServicesModule')
+									treeBuilder.dir('RestServicesModule' + File.separator + 'xodus-db')
 								}
 								else{
-									log.info('logs folder exists')
+									log.info('xodus-db folder exists in RestServicesModule')
+								}
+
+								if(!folderOxygenModule.exists()){
+									log.info('Oxygen module is decoupled')
+								}
+								else{
+									def xodusFolderOxygenModule = new File('OxygenWebAuthorModule' + File.separator + 'xodus-db')
+									if(!xodusFolderOxygenModule.exists()){
+										log.info('xodus-db folder will be created in OxygenWebAuthorModule')
+										treeBuilder.dir('OxygenWebAuthorModule' + File.separator + 'xodus-db')
+									}
+									else{
+										log.info('xodus-db folder exists in OxygenWebAuthorModule')
+									}
 								}
 
 								def targetFolder = new File('target')
-
+								def targetFolderRest = new File('RestServicesModule' + File.separator + 'target')
+								def targetFolderOxygen = new File('OxygenWebAuthorModule' + File.separator + 'target')
 								if(targetFolder.exists()){
-									log.info('target is created on : ' + (new Date(targetFolder.lastModified())))
+									log.info('target is created on : ' + (new
+									Date(targetFolder.lastModified())))
 								}
 								else{
 									log.info('target directory not exist yet')
 								}
 
-							</source>
+								if(targetFolderRest.exists()){
+									log.info('target from Rest Service Module is created on : ' + (new Date(targetFolder.lastModified())))
+								}
+								else{
+									log.info('target from Rest Service Module directory not exist yet')
+								}
+
+								if(targetFolderOxygen.exists()){
+									log.info('target from Oxygen Service Module is created on : ' + (new
+									Date(targetFolder.lastModified())))
+								}
+								else{
+									log.info('target from Oxygen Service Module directory not exist yet')
+								}
+								</source>
+							</configuration>
+					</plugin>
+
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-shade-plugin</artifactId>
+							<version>2.1</version>
+						<configuration>
+							<createDependencyReducedPom>false</createDependencyReducedPom>
 						</configuration>
 					</plugin>
-				</plugins>
-			</build>
-		</profile>
-		
-		<profile>
-			<id>init-empty</id>
-			<build>
-				<plugins>
+
 					<plugin>
-						<groupId>org.codehaus.mojo</groupId>
-						<artifactId>exec-maven-plugin</artifactId>
-						<version>1.4.0</version>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-dependency-plugin</artifactId>
+						<version>3.1.1</version>
 						<executions>
 							<execution>
-								<id>oxygen</id>
+								<id>analyze</id>
 								<goals>
-									<goal>java</goal>
+									<goal>analyze-only</goal>
 								</goals>
 								<configuration>
-									<mainClass>org.basex.BaseX</mainClass>
-									<arguments>
-										<argument>-v</argument>
-										<argument>init-empty.bxs</argument>
-									</arguments>
+									<failOnWarning>true</failOnWarning>
 								</configuration>
 							</execution>
 						</executions>
@@ -321,24 +369,6 @@
 			</build>
 		</profile>
 
-		<profile>
-			<id>gui</id>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.codehaus.mojo</groupId>
-						<artifactId>exec-maven-plugin</artifactId>
-						<version>1.4.0</version>
-						<configuration>
-							<mainClass>org.basex.BaseXGUI</mainClass>
-							<arguments>
-								<argument>ignore</argument>
-							</arguments>
-						</configuration>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
 	</profiles>
 
 </project>
