@@ -56,17 +56,6 @@
 		<Set name="contextPath">/argon-oxygen</Set>
 		<Set name="war">OxygenWebAuthorModule/target/OxygenWebAuthorModule.war
 		</Set>
-		<!--  
-		<Set name="baseResource">
-			<New class="org.eclipse.jetty.util.resource.ResourceCollection">
-				<Arg>
-					<Array type="java.lang.String">
-						<Item>/</Item>
-					</Array>
-				</Arg>
-			</New>
-		</Set>
-		-->
 		
 		<Set name="virtualHosts">
 			<Array type="java.lang.String">

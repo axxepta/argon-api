@@ -27,14 +27,14 @@ public class TestResource {
 
 	private static final Logger LOG = Logger.getLogger(TestResource.class);
 
-	//private Meter metricRegistry;
+	private Meter metricRegistry;
 
 	private HttpServletRequest request;
 
-	/*@Inject
+	@Inject
 	public void setMetricRegistry(Meter metricRegistry) {
 		this.metricRegistry = metricRegistry;
-	}*/
+	}
 
 	@Context
 	public void setRequest(HttpServletRequest request) {
@@ -48,7 +48,7 @@ public class TestResource {
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response test() {
 
-		//metricRegistry.mark();
+		metricRegistry.mark();
 
 		String token = request.getSession().getId();
 		LOG.info("Session id " + token);
@@ -64,7 +64,7 @@ public class TestResource {
 	@Produces(MediaType.TEXT_PLAIN)
 	@Metric
 	public Response date() {
-		//metricRegistry.mark();
+		metricRegistry.mark();
 
 		LocalDateTime dateTime = LocalDateTime.now();
 		LOG.info("Do a simple test on argon server on " + dateTime);

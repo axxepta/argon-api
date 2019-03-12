@@ -9,11 +9,12 @@ import org.glassfish.jersey.message.DeflateEncoder;
 import org.glassfish.jersey.message.GZipEncoder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.filter.EncodingFilter;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import com.fasterxml.jackson.jaxrs.xml.JacksonJaxbXMLProvider;
 
 import de.axxepta.bind.MeterConfigBinder;
-import de.axxepta.rest.configuration.ResourceBundleReader;
+import de.axxepta.properties.ResourceBundleReader;
 import io.swagger.v3.jaxrs2.integration.resources.OpenApiResource;
 
 public class InitResourceConfig {
@@ -31,6 +32,17 @@ public class InitResourceConfig {
 			LOG.info("Register property " + key);
 			resourceConfig.property(key, bundleReader.getValueAsString(key));
 		}	
+	}
+	
+	public static void initRegisterMeterBinder(ResourceConfig config) {
+		LOG.info("Register meter config binder");
+		config.register(new MeterConfigBinder());
+	}
+	
+	public static void initUtilitiesXML(ResourceConfig config) {
+		LOG.info("Register utilities related to XML");
+		config.register(MultiPartFeature.class);	
+	    config.register(JacksonJaxbXMLProvider.class);
 	}
 	
 	public static void initSwaggerProvider(ResourceConfig config) {
@@ -52,16 +64,6 @@ public class InitResourceConfig {
 				config.register(openApiResource);
 			}
 		}
-	}
-	public static void initRegisterMeterBinder(ResourceConfig config) {
-		LOG.info("Register meter config binder");
-		config.register(new MeterConfigBinder());
-	}
-	
-	public static void initUtilitiesXML(ResourceConfig config) {
-		LOG.info("Register utilities related to XML");
-		config.register(MultiPartFeature.class);	
-	    config.register(JacksonJaxbXMLProvider.class);
 	}
 	
 	public static void initEncoding(ResourceConfig config) {
@@ -85,4 +87,11 @@ public class InitResourceConfig {
 			}
 		}
 	}
+	
+	public static void initLogger() {
+		LOG.info("logger config provider is initialized");
+		SLF4JBridgeHandler.removeHandlersForRootLogger();
+		SLF4JBridgeHandler.install();
+	}
+	
 }

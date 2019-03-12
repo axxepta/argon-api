@@ -1,4 +1,4 @@
-package de.axxepta.rest.configuration;
+package de.axxepta.properties;
 
 import java.io.File;
 import java.util.Locale;

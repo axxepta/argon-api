@@ -112,6 +112,11 @@
 
 	</servlet>
 
+	<servlet-mapping>
+        <servlet-name>Jersey REST Service</servlet-name>
+        <url-pattern>/services/*</url-pattern>
+    </servlet-mapping>
+    
 	<servlet>
 		<servlet-name>swagger-bootstrap</servlet-name>
 		<servlet-class>de.axxepta.configuration.ArgonSwaggerBootstrap
@@ -124,9 +129,14 @@
 		<servlet-class>com.codahale.metrics.servlets.AdminServlet
 		</servlet-class>
 	</servlet>
+	
 	<servlet-mapping>
 		<servlet-name>metrics</servlet-name>
 		<url-pattern>/metrics/*</url-pattern>
 	</servlet-mapping>
+	
+	<listener>
+        <listener-class>de.axxepta.listeners.RegisterMetricsListener</listener-class>
+	</listener> 
 
 </web-app>

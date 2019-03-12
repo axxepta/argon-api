@@ -23,6 +23,14 @@ public class ArgonSwaggerBootstrap extends HttpServlet {
 
 	private static final Logger LOG = Logger.getLogger(ArgonSwaggerBootstrap.class);
 
+	private String packageName = "de.axxepta.resources";
+	
+	
+	public void setPackageName(String packageName) {
+		this.packageName = packageName;
+	}
+
+
 	@SuppressWarnings("rawtypes")
 	@Override
 	public void init(ServletConfig servletConfig) throws ServletException {
@@ -33,7 +41,7 @@ public class ArgonSwaggerBootstrap extends HttpServlet {
 
 		oas.info(info);
 		SwaggerConfiguration oasConfig = new SwaggerConfiguration().openAPI(oas).prettyPrint(true)
-				.resourcePackages(Stream.of("de.axxepta.controllers").collect(Collectors.toSet()));
+				.resourcePackages(Stream.of(packageName).collect(Collectors.toSet()));
 	
 
 		LOG.info("Description " + oas.getInfo().getDescription() + " and title " + oas.getInfo().getTitle());

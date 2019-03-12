@@ -13,8 +13,8 @@ import org.apache.log4j.Logger;
 import org.jvnet.hk2.annotations.Service;
 
 import de.axxepta.dao.interfaces.IDocumentCacheDAO;
-import de.axxepta.rest.configuration.BuildResourceBinderReader;
-import de.axxepta.rest.configuration.ResourceBundleReader;
+import de.axxepta.properties.BuildResourceBinderReader;
+import de.axxepta.properties.ResourceBundleReader;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;

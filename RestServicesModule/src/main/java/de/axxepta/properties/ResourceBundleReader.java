@@ -1,4 +1,4 @@
-package de.axxepta.rest.configuration;
+package de.axxepta.properties;
 
 import java.io.File;
 import java.util.Collections;
@@ -7,8 +7,6 @@ import java.util.Locale;
 import java.util.ResourceBundle;
 
 import org.apache.log4j.Logger;
-
-import de.axxepta.configuration.ArgonServerResourceConfig;
 
 public class ResourceBundleReader {
 		

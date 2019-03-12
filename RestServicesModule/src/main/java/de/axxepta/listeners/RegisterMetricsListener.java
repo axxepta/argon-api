@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
-import javax.servlet.annotation.WebListener;
 
 import org.apache.log4j.Logger;
 
@@ -21,7 +20,6 @@ import com.codahale.metrics.servlets.MetricsServlet;
 
 import de.axxepta.health.DatabaseHealth;
 
-@WebListener
 public class RegisterMetricsListener implements ServletContextListener {
 
 	private static final Logger LOG = Logger.getLogger(RegisterMetricsListener.class);
@@ -30,9 +28,11 @@ public class RegisterMetricsListener implements ServletContextListener {
 	
 	public final HealthCheckRegistry health = new HealthCheckRegistry();
 	
+	protected String nameApplication = "rest services";
+	
 	@Override
 	public void contextInitialized(ServletContextEvent event) {
-		LOG.info("Start register metrics listener for rest services");
+		LOG.info("Start register metrics listener for " + nameApplication);
 		
 		event.getServletContext().setAttribute(MetricsServlet.METRICS_REGISTRY, metric);
 		event.getServletContext().setAttribute(HealthCheckServlet.HEALTH_CHECK_REGISTRY, health);	
@@ -52,7 +52,7 @@ public class RegisterMetricsListener implements ServletContextListener {
 
 	@Override
 	public void contextDestroyed(ServletContextEvent event) {
-		LOG.info("Application shutdown");
+		LOG.info("Application " + nameApplication + " shutdown");
 	}
 
 	private void startReport() {
