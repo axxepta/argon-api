@@ -4,7 +4,6 @@ import javax.ws.rs.core.Context;
 
 import org.apache.log4j.Logger;
 import org.glassfish.hk2.api.ServiceLocator;
-import org.glassfish.hk2.utilities.ServiceLocatorUtilities;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import com.fasterxml.jackson.jaxrs.xml.JacksonJaxbXMLProvider;
@@ -21,7 +20,7 @@ public class ArgonServerResourceConfig extends ResourceConfig {
 		
 		LOG.info(this.getApplicationName());
 		
-		InitDiscoveryService.initDiscoveryService(locator, getClass().getClassLoader());
+		InitDiscoveryService.initDiscoveryService(locator, Thread.currentThread().getContextClassLoader());
 		
 		InitResourceConfig.initResourceConfig(this);
 

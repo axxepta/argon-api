@@ -23,11 +23,17 @@ public class ArgonSwaggerBootstrap extends HttpServlet {
 
 	private static final Logger LOG = Logger.getLogger(ArgonSwaggerBootstrap.class);
 
-	private String packageName = "de.axxepta.resources";
+	private String packageName = "de.axxepta.sample";
 	
+	private String title = "Argon REST application";
 	
 	public void setPackageName(String packageName) {
 		this.packageName = packageName;
+	}
+
+	
+	public void setTitle(String title) {
+		this.title = title;
 	}
 
 
@@ -35,14 +41,13 @@ public class ArgonSwaggerBootstrap extends HttpServlet {
 	@Override
 	public void init(ServletConfig servletConfig) throws ServletException {
 		OpenAPI oas = new OpenAPI();
-		Info info = new Info().title("Argon Server Project").description("Project of argon server")
+		Info info = new Info().title(title).description("Project of argon server")
 				.contact(new Contact().email("apiteam@swagger.io"))
 				.license(new License().name("Apache 2.0").url("http://www.apache.org/licenses/LICENSE-2.0.html"));
 
 		oas.info(info);
 		SwaggerConfiguration oasConfig = new SwaggerConfiguration().openAPI(oas).prettyPrint(true)
 				.resourcePackages(Stream.of(packageName).collect(Collectors.toSet()));
-	
 
 		LOG.info("Description " + oas.getInfo().getDescription() + " and title " + oas.getInfo().getTitle());
 		LOG.info("Resource classes " + oasConfig.getResourcePackages());
