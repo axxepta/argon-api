@@ -289,7 +289,7 @@ public class GitResource {
 	@ApiResponses({ @ApiResponse(responseCode = "200", description = "commit with succes"),
 			@ApiResponse(responseCode = "400", description = "string from url cannot be validate"),
 			@ApiResponse(responseCode = "409", description = "exception in execution"),
-			@ApiResponse(responseCode = "417", description = "commit with eventually push did not respect a condition to be executed")})
+			@ApiResponse(responseCode = "417", description = "commit with eventually push did not respect a condition to be executed") })
 	@PUT
 	@ManagedAsync
 	@Path("/commit-push-file")
@@ -306,8 +306,8 @@ public class GitResource {
 		metricRegistry.mark();
 
 		if (!ValidationString.validationString(url, "repository-url")
-				|| !ValidationString.validationString(username, "username")
-				|| !ValidationString.validationString(password, "password")) {
+				|| (url.toLowerCase().startsWith("https") && (!ValidationString.validationString(username, "username")
+						|| !ValidationString.validationString(password, "password")))) {
 			LOG.error("Some string  from request is not a valid one");
 			throw new ResponseException(Response.Status.BAD_REQUEST.getStatusCode(),
 					"Some string from request is not a valid one");
@@ -318,12 +318,12 @@ public class GitResource {
 			throw new ResponseException(Response.Status.BAD_REQUEST.getStatusCode(),
 					"Path with file name from request is not a valid one");
 		}
-		
+
 		UserAuthModel userAuth = new UserAuthModel(username, password);
 
 		Supplier<Boolean> requestTask = () -> {
-			return documentGitService.commitDocumentLocalToGit(url, branchName, new File(pathFileName), onDir, commitMessage,
-					userAuth);
+			return documentGitService.commitDocumentLocalToGit(url, branchName, new File(pathFileName), onDir,
+					commitMessage, userAuth);
 		};
 
 		Future<Boolean> future = CompletableFuture.supplyAsync(requestTask);
@@ -336,11 +336,10 @@ public class GitResource {
 			throw new ResponseException(Response.Status.CONFLICT.getStatusCode(), e.getMessage());
 		}
 
-		if(response == null) {
+		if (response == null) {
 			serviceAsyncResponse.resume(Response.status(Status.CONFLICT)
 					.entity("there was an internal error in executing the commit action").build());
-		}
-		else if (response) {
+		} else if (response) {
 			serviceAsyncResponse.resume(Response.status(Status.OK)
 					.entity("Commit and eventually push command executed successfully").build());
 		} else {

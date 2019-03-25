@@ -134,16 +134,16 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 	@Override
 	public List<String> getRemoteBranchesNames(String gitURL, UserAuthModel userAuth) {
 
-		LOG.info("Obtain head names");
-
 		Collection<Ref> refs = getRefsFromURL(gitURL, userAuth);
-		if (refs == null)
+		if (refs == null) {
+			LOG.error("Refs collections for " + gitURL + " is null");
 			return null;
+		}
 		List<String> branchesNameList = new ArrayList<>();
 		for (Ref ref : refs) {
 			branchesNameList.add(ref.getName().substring(ref.getName().lastIndexOf("/") + 1, ref.getName().length()));
 		}
-
+		LOG.info("Head names list for repository have size " + branchesNameList.size());
 		return branchesNameList;
 	}
 
@@ -153,7 +153,7 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 		Repository repository = getRepository(gitURL, null, userAuth, true);
 
 		if (repository == null) {
-			LOG.info("Null repository");
+			LOG.info("Null repository for " + gitURL);
 			return null;
 		}
 
@@ -180,6 +180,8 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 			LOG.error(e.getMessage());
 			return null;
 		}
+		
+		LOG.info("Pair of list with size for dirs list " + listDirs.size() + " and size for files list " + listFiles.size());
 		return Pair.of(listDirs, listFiles);
 	}
 
@@ -202,8 +204,7 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 			RevTree tree = commit.getTree();
 			TreeWalk treewalk = TreeWalk.forPath(repository, pathFileName, tree);
 			byte[] content = repository.open(treewalk.getObjectId(0)).getBytes();
-			repository.close();
-			walk.close();
+			LOG.info("Get content of document " + pathFileName);
 			return content;
 		} catch (IOException e) {
 			LOG.error(e.getMessage());
@@ -215,8 +216,14 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 	public Boolean commitDocumentLocalToGit(String gitURL, String branchName, File localFile, String copyOnDir,
 			String commitMessage, UserAuthModel userAuth) {
 		Repository repository = getRepository(gitURL, branchName, userAuth, false);
+		
+		if(repository == null) {
+			LOG.info("Repository for " + gitURL  + " is null");
+			return false;
+		}
+		
 		boolean isLocale = false;
-		if (!gitURL.startsWith("https"))
+		if (!gitURL.toLowerCase().startsWith("https"))
 			isLocale = true;
 
 		Boolean response = null;
@@ -231,14 +238,16 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 			deleteTmpDir(repository.getDirectory().getParentFile());
 		}
 
+		LOG.info("Commit and eventually push is executed");
 		return response;
 	}
 
 	private Boolean commitDocumentLocalToGit(Repository repository, String branchName, File localFile, String copyOnDir,
 			String commitMessage, UserAuthModel userAuth, boolean isLocale) {
-		if (repository == null)
+		if (repository == null) {
+			LOG.error("Repository is null");
 			return false;
-
+		}
 		String fileName = localFile.getName();
 		LOG.info("File name " + fileName);
 		String directoryRepositoryPath = repository.getDirectory().getAbsolutePath();
@@ -312,8 +321,10 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 		LOG.info("last modification time for " + url);
 		Repository repository = getRepository(url, null, userAuth, false);
 
-		if (repository == null)
+		if (repository == null) {
+			LOG.info("Repository for " + url + " is null");
 			return null;
+		}
 
 		try (RevWalk revWalk = new RevWalk(repository);) {
 			revWalk.sort(RevSort.COMMIT_TIME_DESC);
@@ -425,17 +436,18 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 	}
 
 	private Repository getLocalRepository(String pathToGit) {
-		File dotGitFile = new File(pathToGit + "/.git");
-		if (!dotGitFile.exists() || dotGitFile.isDirectory())
+		File dotGitFile = new File(pathToGit + File.separator + ".git");
+		if (!dotGitFile.exists() || !dotGitFile.isDirectory()) {
+			LOG.info("Directory " + pathToGit + " not exists");
 			return null;
-
+		}
 		FileRepositoryBuilder repositoryBuilder = new FileRepositoryBuilder();
 		try {
 			Repository repository = repositoryBuilder.setGitDir(dotGitFile).readEnvironment().findGitDir()
 					.setMustExist(true).build();
 			return repository;
 		} catch (IOException e) {
-			LOG.error(e.getMessage());
+			LOG.error("IOException " + e.getMessage());
 			return null;
 		}
 	}
