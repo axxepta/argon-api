@@ -1,5 +1,6 @@
 .logs
-/.settings/
+/.settings
+/RestServicesModule/.settings
 target
 data
 data/.logs
