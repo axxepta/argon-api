@@ -2,10 +2,10 @@ package de.axxepta.services.implementations;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,25 +25,31 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.PushCommand;
-import org.eclipse.jgit.api.RemoteAddCommand;
+import org.eclipse.jgit.api.errors.ConcurrentRefUpdateException;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.api.errors.NoHeadException;
+import org.eclipse.jgit.api.errors.UnmergedPathsException;
+import org.eclipse.jgit.api.errors.WrongRepositoryStateException;
+import org.eclipse.jgit.errors.RevisionSyntaxException;
+import org.eclipse.jgit.lib.Config;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevSort;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
-import org.eclipse.jgit.transport.URIish;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.jvnet.hk2.annotations.Service;
 
-import com.google.common.io.Files;
-
 import de.axxepta.models.UserAuthModel;
 import de.axxepta.services.interfaces.IDocumentGitService;
+import gitdb.integration.DataItem;
+import gitdb.integration.GitDB;
 
 @Service(name = "DocumentGitServiceImplementation")
 @Singleton
@@ -51,7 +57,7 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 
 	private static final Logger LOG = Logger.getLogger(DocumentGitServiceImpl.class);
 
-	private Map<String, Git> gitCloneMap;
+	private Map<String, Repository> repositoryCloneMap;
 
 	private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
@@ -59,22 +65,22 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 	private Application application;
 
 	private int timeDifference;
-	
+
 	private Runnable clearRunnable = new Runnable() {
 		public void run() {
 			long now = Instant.now().toEpochMilli();
 
 			int numberDeletedDir = 0;
-			for (Entry<String, Git> entry : gitCloneMap.entrySet()) {
-				File dirGit = entry.getValue().getRepository().getDirectory();
+			for (Entry<String, Repository> entry : repositoryCloneMap.entrySet()) {
+				File dirGit = entry.getValue().getDirectory();
 				if (now - timeDifference > dirGit.lastModified()) {
 					try {
 						FileUtils.forceDelete(dirGit.getParentFile());
-						gitCloneMap.remove(entry.getKey());
+						repositoryCloneMap.remove(entry.getKey());
 						numberDeletedDir++;
 					} catch (IOException e) {
-						LOG.error("Directory " + dirGit.getParentFile().getAbsolutePath() + " cannot be deleted, with exception "
-								+ e.getMessage());
+						LOG.error("Directory " + dirGit.getParentFile().getAbsolutePath()
+								+ " cannot be deleted, with exception " + e.getMessage());
 					}
 				}
 			}
@@ -109,10 +115,10 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 				LOG.error(cicleTimeDelete + " is not a number");
 			}
 		}
-		
+
 		timeDifference = 100000;
-		
-		if (timeDifferenceDelete!= null && !timeDifferenceDelete.isEmpty()) {
+
+		if (timeDifferenceDelete != null && !timeDifferenceDelete.isEmpty()) {
 
 			try {
 				timeDifference = Integer.parseInt(startTimeDelete);
@@ -120,13 +126,13 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 				LOG.error(startTimeDelete + " is not a number");
 			}
 		}
-		
-		gitCloneMap = new HashMap<>();
+
+		repositoryCloneMap = new HashMap<>();
 		scheduledExecutorService.scheduleAtFixedRate(clearRunnable, startTime, cicleTime, TimeUnit.MINUTES);
 	}
 
 	@Override
-	public List<String> getRemoteNames(String gitURL, UserAuthModel userAuth) {
+	public List<String> getRemoteBranchesNames(String gitURL, UserAuthModel userAuth) {
 
 		LOG.info("Obtain head names");
 
@@ -143,31 +149,22 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 
 	@Override
 	public Pair<List<String>, List<String>> getFileNamesFromCommit(String gitURL, UserAuthModel userAuth) {
-		File temp = null;
-		try {
-			temp = File.createTempFile(gitURL.substring(gitURL.lastIndexOf('/'), gitURL.length()), ".suffix");
-		} catch (IOException e1) {
-			LOG.error("Temp file " + temp + " not exist");
+
+		Repository repository = getRepository(gitURL, null, userAuth, true);
+
+		if (repository == null) {
+			LOG.info("Null repository");
 			return null;
 		}
-		Git git = getGitFromURL(gitURL, userAuth);
-
-		Repository repository = git.getRepository();
-
-		if (repository == null)
-			return null;
 
 		List<String> listDirs = new ArrayList<>();
 		List<String> listFiles = new ArrayList<>();
-		try {
+		try (RevWalk walk = new RevWalk(repository); TreeWalk treeWalk = new TreeWalk(repository);) {
 			ObjectId objectId = repository.resolve(Constants.HEAD);
-			RevWalk walk = new RevWalk(repository);
 			RevCommit commit = walk.parseCommit(objectId);
 			RevTree tree = commit.getTree();
-			TreeWalk treeWalk = new TreeWalk(repository);
 			treeWalk.addTree(tree);
 			treeWalk.setRecursive(false);
-
 			while (treeWalk.next()) {
 				if (treeWalk.isSubtree()) {
 					listDirs.add(treeWalk.getPathString());
@@ -177,33 +174,33 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 				}
 			}
 
-			git.close();
-			walk.close();
-			treeWalk.close();
+			repository.close();
 
 		} catch (IOException e) {
 			LOG.error(e.getMessage());
 			return null;
 		}
-
 		return Pair.of(listDirs, listFiles);
 	}
 
 	@Override
-	public byte[] getDocumentFromRepository(String gitURL, String fileName, UserAuthModel userAuth) {
+	public byte[] getDocumentFromRepository(String gitURL, String branchName, String pathFileName,
+			UserAuthModel userAuth) {
+		Repository repository;
+		if (branchName == null) {
+			repository = getRepository(gitURL, null, userAuth, true);
+		} else {
+			repository = getRepository(gitURL, branchName, userAuth, true);
+		}
 
-		Git git = getGitFromURL(gitURL, userAuth);
-		if (git == null)
+		if (repository == null)
 			return null;
-		Repository repository = git.getRepository();
 
-		try {
+		try (RevWalk walk = new RevWalk(repository);) {
 			ObjectId objectId = repository.resolve(Constants.HEAD);
-			RevWalk walk = new RevWalk(repository);
-
 			RevCommit commit = walk.parseCommit(objectId);
 			RevTree tree = commit.getTree();
-			TreeWalk treewalk = TreeWalk.forPath(repository, fileName, tree);
+			TreeWalk treewalk = TreeWalk.forPath(repository, pathFileName, tree);
 			byte[] content = repository.open(treewalk.getObjectId(0)).getBytes();
 			repository.close();
 			walk.close();
@@ -215,87 +212,139 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 	}
 
 	@Override
-	public boolean commitDocumentLocalStored(String gitURL, File localFile, String directoryOnGit, String commitMessage,
-			UserAuthModel authUser) {
+	public Boolean commitDocumentLocalToGit(String gitURL, String branchName, File localFile, String copyOnDir,
+			String commitMessage, UserAuthModel userAuth) {
+		Repository repository = getRepository(gitURL, branchName, userAuth, false);
+		boolean isLocale = false;
+		if (!gitURL.startsWith("https"))
+			isLocale = true;
 
-		Git git = getGitFromURL(gitURL, authUser);
-
-		File root = git.getRepository().getDirectory();
-		File dirCommit = new File(root.getAbsolutePath() + File.separator + directoryOnGit);
-		if (!dirCommit.exists()) {
-			LOG.error("Directory " + directoryOnGit + " not exists");
-			return false;
-		}
-
+		Boolean response = null;
 		try {
-			FileUtils.copyFileToDirectory(localFile, dirCommit);
-		} catch (IOException e) {
-			LOG.error("The file could not be copied " + e.getMessage());
-			return false;
-		}
-		try {
-			git.add().addFilepattern(localFile.getName()).call();
-		} catch (GitAPIException e) {
-			LOG.error("The file cannot be added to local repository " + e.getMessage());
-			return false;
-		}
-
-		// commit
-		try {
-			git.commit().setOnly(localFile.getName()).setMessage(commitMessage).call();
-		} catch (GitAPIException e) {
-			LOG.error("The file cannot be commited " + e.getMessage());
-			return false;
-		}
-
-		// push on local git
-
-		RemoteAddCommand remoteAddCommand = git.remoteAdd();
-		String branchName;
-		try {
-			branchName = git.getRepository().getBranch();
-		} catch (IOException e1) {
-			LOG.error("Cannot be obtain branch name");
-			return false;
-
-		}
-
-		LOG.info("Branch name is " + branchName);
-
-		remoteAddCommand.setName(branchName);
-		try {
-			remoteAddCommand.setUri(new URIish(gitURL));
-		} catch (URISyntaxException e) {
+			response = commitDocumentLocalToGit(repository, branchName, localFile, copyOnDir, commitMessage, userAuth,
+					isLocale);
+		} catch (Exception e) {
 			LOG.error(e.getMessage());
-			return false;
 		}
 
-		try {
-			remoteAddCommand.call();
-		} catch (GitAPIException e) {
-			LOG.error(e.getMessage());
-			return false;
+		if (!isLocale) {
+			deleteTmpDir(repository.getDirectory().getParentFile());
 		}
 
-		PushCommand pushCommand = git.push();
-		pushCommand.setCredentialsProvider(
-				new UsernamePasswordCredentialsProvider(authUser.getUsername(), authUser.getPassword()));
-
-		try {
-			pushCommand.call();
-		} catch (GitAPIException e) {
-			LOG.error(e.getMessage());
-			return false;
-		}
-		return false;
+		return response;
 	}
 
-	private Collection<Ref> getRefsFromURL(String url, UserAuthModel authUser) {
+	private Boolean commitDocumentLocalToGit(Repository repository, String branchName, File localFile, String copyOnDir,
+			String commitMessage, UserAuthModel userAuth, boolean isLocale) {
+		if (repository == null)
+			return false;
+
+		String fileName = localFile.getName();
+		LOG.info("File name " + fileName);
+		String directoryRepositoryPath = repository.getDirectory().getAbsolutePath();
+		String pathRepository = directoryRepositoryPath.substring(0,
+				directoryRepositoryPath.lastIndexOf(File.separator));
+		
+		File directoryRepository = new File(pathRepository + File.separator + copyOnDir);
+
+		if (!directoryRepository.exists()) {
+			try {
+				java.nio.file.Files.createDirectories(directoryRepository.toPath());
+			} catch (IOException e) {
+				LOG.error(e.getMessage());
+				return false;
+			}
+		}
+
+		LOG.info("Path is " + directoryRepository.getAbsolutePath());
+		try {
+			FileUtils.copyFileToDirectory(localFile, directoryRepository);
+		} catch (IOException e1) {
+			LOG.error("Copy to temp directory has not been achieved");
+			return false;
+		}
+
+		try (RevWalk walk = new RevWalk(repository);
+				Git git = new Git(repository);
+				GitDB gitDB = new GitDB(repository);) {
+			LOG.info("Try to commit file with name " + fileName + " from path " + pathRepository);
+
+			DataItem dataItem;
+			if (copyOnDir == null) {
+				dataItem = new DataItem(fileName,
+						FileUtils.readFileToString(new File(directoryRepository + File.separator + fileName)));
+			} else {
+				dataItem = new DataItem(copyOnDir + "/" + fileName,
+						FileUtils.readFileToString(new File(directoryRepository + File.separator + fileName)));
+			}
+			LOG.info("Commit message " + commitMessage);
+			Config config = repository.getConfig();
+			String name = config.getString("user", null, "name");
+			String email = config.getString("user", null, "email");
+			LOG.info("Repository name " + name + " with email " + email);
+			RevCommit commit = gitDB.commit(dataItem, commitMessage, name, email);
+
+			LOG.info("SHA commit " + commit.getName());
+
+			if (!isLocale) {
+				PushCommand pushCommand = git.push();
+				try {
+					UsernamePasswordCredentialsProvider credentialsProvider = getCredetialsProvider(userAuth);
+					pushCommand.setCredentialsProvider(credentialsProvider).call();
+					LOG.info("Commit is push it");
+				} catch (GitAPIException e) {
+					LOG.error("Push on repository exception " + e.getMessage());
+					return false;
+				}
+			}
+
+		} catch (RevisionSyntaxException | IOException | InterruptedException | UnmergedPathsException
+				| WrongRepositoryStateException | NoHeadException | ConcurrentRefUpdateException e) {
+			LOG.error("Commit Exception " + e.getMessage());
+			return false;
+		}
+
+		return true;
+	}
+
+	@Override
+	public Date lastModify(String url, UserAuthModel userAuth) {
+		LOG.info("last modification time for " + url);
+		Repository repository = getRepository(url, null, userAuth, false);
+
+		if (repository == null)
+			return null;
+
+		try (RevWalk revWalk = new RevWalk(repository);) {
+			revWalk.sort(RevSort.COMMIT_TIME_DESC);
+			List<Ref> refs = repository.getRefDatabase().getRefs();
+			for (Ref ref : refs) {
+				RevCommit commit = revWalk.parseCommit(ref.getLeaf().getObjectId());
+				revWalk.markStart(commit);
+			}
+			RevCommit newest = revWalk.next();
+			return newest.getAuthorIdent().getWhen();
+		} catch (IOException e) {
+			LOG.error(e.getMessage());
+			return null;
+		}
+	}
+
+	private UsernamePasswordCredentialsProvider getCredetialsProvider(UserAuthModel userAuth) {
 		UsernamePasswordCredentialsProvider credentials = null;
-		String username = authUser.getUsername();
-		String password = authUser.getPassword();
-		if (username != null && !username.isEmpty() && password != null && !password.isEmpty())
+		String username = userAuth.getUsername();
+		String password = userAuth.getPassword();
+		if (username != null && !username.isEmpty() && password != null && !password.isEmpty()) {
+			LOG.info("For username " + username);
 			credentials = new UsernamePasswordCredentialsProvider(username, password);
+		}
+
+		return credentials;
+	}
+
+	private Collection<Ref> getRefsFromURL(String url, UserAuthModel userAuth) {
+		LOG.info("Get refs for " + url);
+		UsernamePasswordCredentialsProvider credentials = getCredetialsProvider(userAuth);
 
 		long start = System.nanoTime();
 
@@ -315,25 +364,47 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 		return refsRepository;
 	}
 
-	private Git getGitFromURL(String url, UserAuthModel authUser) {
+	private Repository getRepository(String urlGitRepository, String branchName, UserAuthModel authUser,
+			boolean withCache) {
 
-		UsernamePasswordCredentialsProvider credentials = null;
+		// is a local repository
+		if (!urlGitRepository.startsWith("https")) {
+			Repository repository = getLocalRepository(urlGitRepository);
+			return repository;
+		}
 
-		String username = authUser.getUsername();
-		String password = authUser.getPassword();
-		if (username != null && !username.isEmpty() && password != null && !password.isEmpty())
-			credentials = new UsernamePasswordCredentialsProvider(username, password);
+		UsernamePasswordCredentialsProvider credentials = getCredetialsProvider(authUser);
 
-		Git git = null;
-		if (!gitCloneMap.containsKey(url)) {
+		Repository repository = null;
+		if (!repositoryCloneMap.containsKey(urlGitRepository)) {
+
 			File tempDirClone = null;
 
-			tempDirClone = Files.createTempDir();
+			tempDirClone = com.google.common.io.Files.createTempDir();
 
 			long start = System.nanoTime();
 			try {
-				git = Git.cloneRepository().setURI(url).setCredentialsProvider(credentials).setDirectory(tempDirClone)
-						.call();
+				Git git = null;
+				if (branchName == null)
+					// clone all available branches
+					git = Git.cloneRepository().setURI(urlGitRepository).setCredentialsProvider(credentials)
+							.setDirectory(tempDirClone).setCloneAllBranches(true).call();
+				else {
+					git = Git.cloneRepository().setURI(urlGitRepository).setBranch(branchName)
+							.setCredentialsProvider(credentials).setDirectory(tempDirClone).call();
+					urlGitRepository += "/tree/" + branchName;
+				}
+
+				if (git != null)
+					repository = git.getRepository();
+				else
+					return null;
+
+				if (withCache) {
+					LOG.info("URL " + urlGitRepository + " was registered to cache");
+					repositoryCloneMap.put(urlGitRepository, repository);
+				}
+
 			} catch (GitAPIException e) {
 				LOG.error(e.getMessage());
 				return null;
@@ -341,27 +412,49 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 
 			long end = System.nanoTime();
 
-			gitCloneMap.put(url, git);
-			LOG.info("Duration to obtain Ref from URL " + url + "  is " + (end - start) + " nano seconds");
+			LOG.info("Duration to obtain Ref from URL " + urlGitRepository + "  is " + (end - start) + " nano seconds");
 		} else {
-			LOG.info(url + " is contained in hash map");
-			git = gitCloneMap.get(url);
+			LOG.info(urlGitRepository + " is contained in hash map");
+			if (branchName == null)
+				repository = repositoryCloneMap.get(urlGitRepository);
+			else
+				repository = repositoryCloneMap.get(urlGitRepository + "/tree/" + branchName);
 		}
 
-		return git;
+		return repository;
+	}
+
+	private Repository getLocalRepository(String pathToGit) {
+		File dotGitFile = new File(pathToGit + "/.git");
+		if (!dotGitFile.exists() || dotGitFile.isDirectory())
+			return null;
+
+		FileRepositoryBuilder repositoryBuilder = new FileRepositoryBuilder();
+		try {
+			Repository repository = repositoryBuilder.setGitDir(dotGitFile).readEnvironment().findGitDir()
+					.setMustExist(true).build();
+			return repository;
+		} catch (IOException e) {
+			LOG.error(e.getMessage());
+			return null;
+		}
 	}
 
 	@PreDestroy
-	private void shutdowsService() {
-		for (Entry<String, Git> entry : gitCloneMap.entrySet()) {
-			File dirGit = entry.getValue().getRepository().getDirectory();
-			try {
-				FileUtils.forceDelete(dirGit.getParentFile());
-				LOG.info(dirGit + " was succesfuly deleted");
-			} catch (IOException e) {
-				LOG.error("Directory " + dirGit.getParentFile().getAbsolutePath()
-						+ " cannot be deleted, with exception " + e.getMessage() + " in shutdown method");
-			}
+	private void shutdownService() {
+		for (Entry<String, Repository> entry : repositoryCloneMap.entrySet()) {
+			File dirGit = entry.getValue().getDirectory();
+			deleteTmpDir(dirGit.getParentFile());
+		}
+	}
+
+	private void deleteTmpDir(File file) {
+		try {
+			FileUtils.forceDelete(file);
+			LOG.info(file.getAbsolutePath() + " was succesfuly deleted");
+		} catch (IOException e) {
+			LOG.error("Directory " + file.getAbsolutePath() + " cannot be deleted, with exception " + e.getMessage()
+					+ " in shutdown method");
 		}
 	}
 }

@@ -1,5 +1,8 @@
 package gitdb.integration;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.log4j.Logger;
+
 /*
  * Copyright 2017-2018 E257.FI
  *
@@ -32,6 +35,7 @@ package gitdb.integration;
  * url: https://github.com/GerritCodeReview/gerrit
  * path: gerrit-server/src/main/java/com/google/gerrit/server/git/VersionedMetaData.java
  * commit: b4af8cad4d3982a0bba763a5e681d26078da5a0e
+ * Modifications copyright (C) 2019 
  */
 
 import org.eclipse.jgit.api.errors.ConcurrentRefUpdateException;
@@ -68,189 +72,204 @@ import java.util.List;
 
 public class GitDB implements Closeable {
 
-    private int writeLockWait = 25;
-    protected Repository repo;
-    protected DirCache index;
-    private LockFile repoLock;
+	private int writeLockWait = 25;
+	protected Repository repo;
+	protected DirCache index;
+	private LockFile repoLock;
 
-    protected String getRefName() {
-        return "refs/heads/master";
-    }
+	// private static final Logger LOG = Logger.getLogger(GitDB.class);
 
-    protected File getRefLockFile() {
-        return Paths.get(repo.getDirectory().toString(),"tackler/locks", getRefName()).toFile();
-    }
-    protected File getWriteLockFile() {
-        return Paths.get(getRefLockFile().toString(), "write").toFile();
-    }
+	protected String getRefName() {
+		return "refs/heads/master";
+	}
 
-    public GitDB(Repository repo) throws IOException, InterruptedException {
-        this.repo = repo;
-        repoLock = new LockFile(getRefLockFile());
-        acquireLock(repoLock, 2000, 25);
-        index = dircache();
-    }
+	protected File getRefLockFile() {
+		return Paths.get(repo.getDirectory().toString(), "tackler/locks", getRefName()).toFile();
+	}
 
-    @Override
-    public void close() throws IOException {
-        if (repoLock != null) {
-            repoLock.unlock();
-        }
-    }
+	protected File getWriteLockFile() {
+		return Paths.get(getRefLockFile().toString(), "write").toFile();
+	}
 
-    private DirCache dircache() throws IOException {
-        try (RevWalk rw = new RevWalk(repo)) {
-            Ref head = repo.exactRef(getRefName());
+	public GitDB(Repository repo) throws IOException, InterruptedException {
+		this.repo = repo;
+		repoLock = new LockFile(getRefLockFile());
+		acquireLock(repoLock, 2000, 25);
 
-            RevCommit revision = head != null ? (head.getObjectId() != null ? rw.parseCommit(head.getObjectId()) : null) : null;
-            RevTree tree = revision != null ? rw.parseTree(revision) : null;
+		index = dircache();
+	}
 
-            return readTreeToIndex(tree);
-        }
-    }
+	@Override
+	public void close() throws IOException {
+		if (repoLock != null) {
+			repoLock.unlock();
+		}
+	}
 
-    private static void acquireLock(LockFile lock, int maxWait, int sleep) throws IOException, InterruptedException {
-        int wait=0;
-        while (!lock.lock()) {
-            // TODO exception to freedom if too many rounds
-            Thread.sleep(sleep);
-            wait += sleep;
-            if (maxWait < wait) {
-                throw new RuntimeException("Can not get lock: " + lock.toString());
-            }
-        }
-    }
+	private DirCache dircache() throws IOException {
+		try (RevWalk rw = new RevWalk(repo)) {
+			Ref head = repo.exactRef(getRefName());
 
-    public RevCommit commit(DataItem data) throws UnmergedPathsException, InterruptedException, IOException, WrongRepositoryStateException, NoHeadException, ConcurrentRefUpdateException {
-        LockFile writeLock = new LockFile(getWriteLockFile());
-        try {
-            acquireLock(writeLock, 2000, writeLockWait);
-            return commit22(data);
-        } finally {
-            writeLock.unlock();
-        }
-    }
+			RevCommit revision = head != null ? (head.getObjectId() != null ? rw.parseCommit(head.getObjectId()) : null)
+					: null;
+			RevTree tree = revision != null ? rw.parseTree(revision) : null;
 
-    // JGIT-porcelain
-    private RevCommit commit22(DataItem data) throws IOException, WrongRepositoryStateException, NoHeadException, ConcurrentRefUpdateException, UnmergedPathsException, InterruptedException {
-        List<ObjectId> parents = new LinkedList<>();
+			return readTreeToIndex(tree);
+		}
+	}
 
-        try (RevWalk rw = new RevWalk(repo)) {
-            Ref head = repo.exactRef(getRefName());
+	private static void acquireLock(LockFile lock, int maxWait, int sleep) throws IOException, InterruptedException {
+		int wait = 0;
+		while (!lock.lock()) {
+			// TODO exception to freedom if too many rounds
+			Thread.sleep(sleep);
+			wait += sleep;
+			if (maxWait < wait) {
+				throw new RuntimeException("Can not get lock: " + lock.toString());
+			}
+		}
+	}
 
-            // determine the current head of ref and the commit it is referring to
-            ObjectId headId = repo.resolve(getRefName() + "^{commit}");
+	public RevCommit commit(DataItem data, String commitMessage, String name, String email)
+			throws UnmergedPathsException, InterruptedException, IOException, WrongRepositoryStateException,
+			NoHeadException, ConcurrentRefUpdateException {
+		// FileUtils
+		LockFile writeLock = new LockFile(getWriteLockFile());
+		try {
+			acquireLock(writeLock, 2000, writeLockWait);
+			return commit22(data, commitMessage, name, email);
+		} finally {
+			writeLock.unlock();
+		}
+	}
 
-            if (headId != null) {
-                parents.add(headId);
-            }
+	// JGIT-porcelain
+	private RevCommit commit22(DataItem data, String commitMessage, String name, String email)
+			throws IOException, WrongRepositoryStateException, NoHeadException, ConcurrentRefUpdateException,
+			UnmergedPathsException, InterruptedException {
+		List<ObjectId> parents = new LinkedList<>();
 
-            RevCommit revision = head != null ? (head.getObjectId() != null ? rw.parseCommit(head.getObjectId()) : null) : null;
-            RevTree tree = revision != null ? rw.parseTree(revision) : null;
+		try (RevWalk rw = new RevWalk(repo)) {
+			Ref head = repo.exactRef(getRefName());
 
-            index = readTreeToIndex(tree);
+			// determine the current head of ref and the commit it is referring to
+			ObjectId headId = repo.resolve(getRefName() + "^{commit}");
 
-            try (ObjectInserter odi = repo.newObjectInserter()) {
-                // write data at path to the index
-                saveUTF8(index, odi, data.getPath(), data.getData());
+			if (headId != null) {
+				parents.add(headId);
+			}
 
-                // Write the index as tree to the object database. This may
-                // fail for example when the index contains unmerged paths
-                // (unresolved conflicts)
-                ObjectId indexTreeId = index.writeTree(odi);
+			RevCommit revision = head != null ? (head.getObjectId() != null ? rw.parseCommit(head.getObjectId()) : null)
+					: null;
+			RevTree tree = revision != null ? rw.parseTree(revision) : null;
 
-                // Check for empty commits
-                if (headId != null) {
-                    RevCommit headCommit = rw.parseCommit(headId);
-                    headCommit.getTree();
-                    if (indexTreeId.equals(headCommit.getTree())) {
-                        // TODO log empty commit and return?
-                    }
-                }
+			index = readTreeToIndex(tree);
 
-                // Create a Commit object, populate it and write it
-                CommitBuilder commit = new CommitBuilder();
-                PersonIdent pi = new PersonIdent("name", "email");
+			try (ObjectInserter odi = repo.newObjectInserter()) {
+				// write data at path to the index
+				saveUTF8(index, odi, data.getPath(), data.getData());
 
-                commit.setAuthor(pi);
-                commit.setCommitter(pi);
-                commit.setMessage("db commit by v2");
+				// Write the index as tree to the object database. This may
+				// fail for example when the index contains unmerged paths
+				// (unresolved conflicts)
+				ObjectId indexTreeId = index.writeTree(odi);
 
-                commit.setParentIds(parents);
-                commit.setTreeId(indexTreeId);
+				// Check for empty commits
+				if (headId != null) {
+					RevCommit headCommit = rw.parseCommit(headId);
+					headCommit.getTree();
+					if (indexTreeId.equals(headCommit.getTree())) {
+						// TODO log empty commit and return?
+					}
+				}
 
-                ObjectId commitId = odi.insert(commit);
-                odi.flush();
+				// Create a Commit object, populate it and write it
+				CommitBuilder commit = new CommitBuilder();
+				
+				PersonIdent pi;
+				if (name == null || email == null || name.isEmpty() || email.isEmpty())
+					pi = new PersonIdent("name", "email");
+				else
+					pi = new PersonIdent(name, email);
+				
+				commit.setAuthor(pi);
+				commit.setCommitter(pi);
+				if (commitMessage == null)
+					commit.setMessage("db commit by v2");
+				else
+					commit.setMessage(commitMessage);
 
-                RevCommit revCommit = rw.parseCommit(commitId);
-                RefUpdate ru = repo.updateRef(Constants.HEAD);
+				commit.setParentIds(parents);
+				commit.setTreeId(indexTreeId);
 
-                ru.setNewObjectId(commitId);
-                ru.setRefLogIdent(pi);
-                ru.setRefLogMessage("reflog commit v2", true);
+				ObjectId commitId = odi.insert(commit);
+				odi.flush();
 
-                if (headId != null)
-                    ru.setExpectedOldObjectId(headId);
-                else
-                    ru.setExpectedOldObjectId(ObjectId.zeroId());
+				RevCommit revCommit = rw.parseCommit(commitId);
+				RefUpdate ru = repo.updateRef(Constants.HEAD);
 
-                RefUpdate.Result rc = ru.forceUpdate();
-                switch (rc) {
-                    case NEW:
-                    case FORCED:
-                    case FAST_FORWARD: {
-                        return revCommit;
-                    }
-                    case REJECTED:
-                    case LOCK_FAILURE:
-                        throw new ConcurrentRefUpdateException(
-                                "Concurrent ref error: Could not lock: ", ru.getRef(), rc);
-                    default:
-                        throw new JGitInternalException(MessageFormat.format(
-                                JGitText.get().updatingRefFailed, Constants.HEAD,
-                                commitId.toString(), rc));
-                }
-            }
-        }
-    }
+				ru.setNewObjectId(commitId);
+				ru.setRefLogIdent(pi);
+				ru.setRefLogMessage("reflog commit v2", true);
 
+				if (headId != null)
+					ru.setExpectedOldObjectId(headId);
+				else
+					ru.setExpectedOldObjectId(ObjectId.zeroId());
 
-    /**
-     * Read existing tree to new index. Index is newInCore based.
-     */
-    private DirCache readTreeToIndex(RevTree tree) throws IOException {
-        if (index != null) {
-            return index;
-        } else {
-            if (tree != null) {
-                try (ObjectReader reader = repo.newObjectReader()) {
-                    return DirCache.read(reader, tree);
-                }
-            } else {
-                return DirCache.newInCore();
-            }
-        }
-    }
+				RefUpdate.Result rc = ru.forceUpdate();
+				switch (rc) {
+				case NEW:
+				case FORCED:
+				case FAST_FORWARD: {
+					return revCommit;
+				}
+				case REJECTED:
+				case LOCK_FAILURE:
+					throw new ConcurrentRefUpdateException("Concurrent ref error: Could not lock: ", ru.getRef(), rc);
+				default:
+					throw new JGitInternalException(MessageFormat.format(JGitText.get().updatingRefFailed,
+							Constants.HEAD, commitId.toString(), rc));
+				}
+			}
+		}
+	}
 
-    static protected void saveUTF8(DirCache index, ObjectInserter odi, String path, String text) throws IOException {
-        saveData(index, odi, path, Constants.encode(text));
-    }
+	/**
+	 * Read existing tree to new index. Index is newInCore based.
+	 */
+	private DirCache readTreeToIndex(RevTree tree) throws IOException {
+		if (index != null) {
+			return index;
+		} else {
+			if (tree != null) {
+				try (ObjectReader reader = repo.newObjectReader()) {
+					return DirCache.read(reader, tree);
+				}
+			} else {
+				return DirCache.newInCore();
+			}
+		}
+	}
 
-    static private void saveData(DirCache index, ObjectInserter odi, String path, byte[] blob) throws IOException {
-        assert blob != null;
-        assert 0 < blob.length;
+	static protected void saveUTF8(DirCache index, ObjectInserter odi, String path, String text) throws IOException {
+		saveData(index, odi, path, Constants.encode(text));
+	}
 
-        ObjectId blobId = odi.insert(Constants.OBJ_BLOB, blob);
+	static private void saveData(DirCache index, ObjectInserter odi, String path, byte[] blob) throws IOException {
+		assert blob != null;
+		assert 0 < blob.length;
 
-        DirCacheEditor editor = index.editor();
-        editor.add(
-                new DirCacheEditor.PathEdit(path) {
-                    @Override
-                    public void apply(DirCacheEntry entry) {
-                        entry.setFileMode(FileMode.REGULAR_FILE);
-                        entry.setObjectId(blobId);
-                    }
-                });
-        editor.finish();
-    }
+		ObjectId blobId = odi.insert(Constants.OBJ_BLOB, blob);
+
+		DirCacheEditor editor = index.editor();
+		editor.add(new DirCacheEditor.PathEdit(path) {
+			@Override
+			public void apply(DirCacheEntry entry) {
+				entry.setFileMode(FileMode.REGULAR_FILE);
+				entry.setObjectId(blobId);
+			}
+		});
+		editor.finish();
+	}
 }
