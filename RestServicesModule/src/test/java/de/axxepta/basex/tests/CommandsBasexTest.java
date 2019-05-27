@@ -13,6 +13,7 @@ import org.junit.runners.MethodSorters;
 import org.junit.Test;
 
 import de.axxepta.basex.RunDirectCommands;
+import de.axxepta.basex.RunDirectCommandsSingleton;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -51,7 +52,7 @@ public class CommandsBasexTest {
 			fail("Client cannot be created");
 		}
 
-		runDirectCommands = new RunDirectCommands();
+		runDirectCommands = RunDirectCommandsSingleton.INSTANCE.getRunCommands();
 	}
 
 	@Test

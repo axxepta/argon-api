@@ -1,5 +1,6 @@
 package de.axxepta.configuration;
 
+import javax.servlet.ServletRequest;
 import javax.ws.rs.core.Context;
 
 import org.apache.log4j.Logger;
@@ -11,7 +12,7 @@ import com.fasterxml.jackson.jaxrs.xml.JacksonJaxbXMLProvider;
 public class ArgonServerResourceConfig extends ResourceConfig {
 
 	private static final Logger LOG = Logger.getLogger(ArgonServerResourceConfig.class);
-
+	
 	public ArgonServerResourceConfig(@Context ServiceLocator locator) {
 		
 		setApplicationName("REST Argon server application");
@@ -37,6 +38,7 @@ public class ArgonServerResourceConfig extends ResourceConfig {
 		InitResourceConfig.initEncoding(this);
 		
 		InitResourceConfig.initLogger();
+		
 	}
 
 }

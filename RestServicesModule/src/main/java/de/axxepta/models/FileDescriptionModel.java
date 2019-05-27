@@ -7,6 +7,7 @@ public class FileDescriptionModel {
 	private URL fileURL;
 	private String initialFileName;
 	private String typeFile;
+	private boolean isAddedToDatabase;
 	
 	public FileDescriptionModel() {
 		super();
@@ -42,4 +43,13 @@ public class FileDescriptionModel {
 	public void setTypeFile(String typeFile) {
 		this.typeFile = typeFile;
 	}
+
+	public boolean isAddedToDatabase() {
+		return isAddedToDatabase;
+	}
+
+	public void setAddedToDatabase(boolean isAddedToDatabase) {
+		this.isAddedToDatabase = isAddedToDatabase;
+	}
+
 }

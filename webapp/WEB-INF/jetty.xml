@@ -16,7 +16,7 @@
 				</New>
 			</Item>
 			
-			<Item>
+	 		<Item>
 				<New class="org.eclipse.jetty.server.ServerConnector">
 					<Arg>
 						<Ref refid="Server" />
@@ -26,7 +26,7 @@
 
 				</New>
 			</Item>
-			
+	
 		</Array>
 	</Set>
 

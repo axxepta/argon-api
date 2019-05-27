@@ -14,15 +14,15 @@
 
 	<context-param>
 		<param-name>org.basex.dbpath</param-name>
-		<param-value>data</param-value>
+		<param-value>../../../data</param-value>
 	</context-param>
 	<context-param>
 		<param-name>org.basex.repopath</param-name>
-		<param-value>repo</param-value>
+		<param-value>../../../repo</param-value>
 	</context-param>
 	<context-param>
 		<param-name>org.basex.webpath</param-name>
-		<param-value>webapp</param-value>
+		<param-value>../../../webapp</param-value>
 	</context-param>
 
 	<listener>
@@ -46,6 +46,7 @@
 		</init-param>
 		<load-on-startup>1</load-on-startup>
 	</servlet>
+	
 	<servlet>
 		<servlet-name>REST</servlet-name>
 		<servlet-class>org.basex.http.rest.RESTServlet</servlet-class>
@@ -57,7 +58,7 @@
 			<param-name>org.basex.password</param-name>
 			<param-value>admin</param-value>
 		</init-param>
-		<load-on-startup>1</load-on-startup>
+		<load-on-startup>0</load-on-startup>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>RESTXQ</servlet-name>
@@ -100,6 +101,7 @@
 			<param-value>org.glassfish.jersey.jackson.JacksonFeature
 			</param-value>
 		</init-param>
+		
 		<init-param>
 			<param-name>jersey.config.server.monitoring.statistics.enabled
 			</param-name>
@@ -108,7 +110,7 @@
 
 		<async-supported>true</async-supported>
 
-		<load-on-startup>0</load-on-startup>
+		<load-on-startup>1</load-on-startup>
 
 	</servlet>
 
@@ -139,4 +141,7 @@
         <listener-class>de.axxepta.listeners.RegisterMetricsListener</listener-class>
 	</listener> 
 
+	<listener>
+		<listener-class>de.axxepta.listeners.RestDatabasePathContextListener</listener-class>
+	</listener>
 </web-app>

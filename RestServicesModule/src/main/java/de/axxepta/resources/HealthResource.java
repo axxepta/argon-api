@@ -1,15 +1,18 @@
 package de.axxepta.resources;
 
+import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Provider;
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
@@ -31,6 +34,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import ro.sync.basic.util.JreDetector;
 
 
 @Path("health")
@@ -144,4 +148,54 @@ public class HealthResource{
 
 	}
 	
+	@Operation(summary = "Check JRE", description = "Check JRE -that service can be use just from loopback", method = "GET", operationId = "#2_10")
+	@ApiResponses({ @ApiResponse(responseCode = "200", description = "flavor and version of JRE"),
+			@ApiResponse(responseCode = "400", description = "request is not from loopback") })
+	@Path("check-jre")
+	@GET
+	@Produces(MediaType.TEXT_PLAIN)
+	public Response checkJRE(@Context HttpServletRequest servletRequest) throws ResponseException {	
+		metricRegistry.mark();
+		
+		if (!servletRequest.getRemoteAddr().equals(InetAddress.getLoopbackAddress().getHostAddress())) {
+			LOG.error("The request was not made from loopback");
+			throw new ResponseException(Response.Status.BAD_REQUEST.getStatusCode(),
+					"The request was not made in loopback");
+		}
+		
+		String response = "";
+		if(JreDetector.isSunJRE()) {
+			response += "JRE from Sun(Oracle) ";
+		}
+		else if(JreDetector.isSunOpenJDK()) {
+			response += "JRE is provided by OpenJDK from Sun(Oracle) ";
+		}
+		else if(JreDetector.isAppleJRE()){
+			response += "JRE from Apple ";
+		}
+		else if(JreDetector.isIBMJRE())
+			response += "JRE from IBM ";
+		else
+			response += "Other JRE ";
+		
+		if(JreDetector.isJRE9OrGreater()) {
+			response += "version 9 or greater";
+		}
+		else if(JreDetector.isJRE18OrGreater()) {
+			response += "version 8";
+		}
+		else if(JreDetector.isJRE17OrGreater()) {
+			response += "version 7";
+		}
+		else if(JreDetector.isJRE16OrGreater()) {
+			response += "version 6";
+		}
+		else {
+			response += "other version";
+		}
+		
+		LOG.info(response);
+		return Response.status(Status.OK).entity(response).build();
+	}
+		
 }

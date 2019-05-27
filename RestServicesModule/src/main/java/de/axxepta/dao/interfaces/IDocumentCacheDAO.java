@@ -19,4 +19,6 @@ public interface IDocumentCacheDAO {
 	
 	public boolean delete(String fileName);
 	
+	public List<String> getListFileName(boolean isFromCache);
+	
 }

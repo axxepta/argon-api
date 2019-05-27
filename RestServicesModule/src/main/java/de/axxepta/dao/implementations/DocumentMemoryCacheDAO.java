@@ -33,23 +33,24 @@ public class DocumentMemoryCacheDAO implements IDocumentCacheDAO {
 	private IDocumentCacheDAO documentDatabaseCacheDAO;
 
 	private ResourceBundleReader resourceBundleReader;
-	
+
 	@PostConstruct
 	private void initCacheDAO() {
-		
+
 		CacheManager cacheManager = CacheManager.getInstance();
 		cacheManager.addCache("documents");
-		
+
 		LOG.info("Caches " + Arrays.toString(cacheManager.getCacheNames()));
-		
-		if(!cacheManager.cacheExists("documents"))
+
+		if (!cacheManager.cacheExists("documents"))
 			LOG.error("Cache documents not exists yet");
 		else
 			LOG.info("Cache documents was created");
-		
+
 		cache = cacheManager.getCache("documents");
-				
+
 		resourceBundleReader = new BuildResourceBinderReader("ArgonServerConfig").getBundlerReader();
+
 		configureCache();
 	}
 
@@ -60,17 +61,19 @@ public class DocumentMemoryCacheDAO implements IDocumentCacheDAO {
 		int timeLive = 100;
 
 		LOG.info("Available keys " + resourceBundleReader.getKeys());
-		
+
 		try {
 			maxElements = Integer
 					.parseUnsignedInt((String) resourceBundleReader.getValueAsString("cache-max-elements-in-memory"));
+			LOG.info("max elements of cache will be set " + maxElements);
 		} catch (Exception e) {
-			LOG.error("cachemax-elements-in-memory wasn't found or isn't a number");
+			LOG.error("cache-max-elements-in-memory wasn't found or isn't a number");
 		}
 
 		try {
 			timeLive = Integer
 					.parseUnsignedInt((String) resourceBundleReader.getValueAsString("cache-seconds-time-to-live"));
+			LOG.info("Time live in cache will be set as " + timeLive);
 		} catch (Exception e) {
 			LOG.error("cache-seconds-time-to-live wasn't found or isn't a number");
 		}
@@ -89,19 +92,26 @@ public class DocumentMemoryCacheDAO implements IDocumentCacheDAO {
 
 	@Override
 	public Boolean setDatabaseName(String databaseName) {
+		LOG.info("New database is set with name " + databaseName);
 		return documentDatabaseCacheDAO.setDatabaseName(databaseName);
 	}
 
 	@Override
 	public String getContentFile(String fileName) {
-		if (cache.isKeyInCache(fileName))
+		LOG.info("Get content of the file with name " + fileName);
+		if (cache.isKeyInCache(fileName)) {
+			LOG.info("File with name " + fileName + " was founded in memory cache");
 			return (String) cache.get(fileName).getValue();
-		else
+		} else {
+			LOG.info("Try to return content from next cache level");
 			return documentDatabaseCacheDAO.getContentFile(fileName);
+		}
 	}
 
 	@Override
 	public boolean save(String fileName, String content) {
+		LOG.info("Save content of the file with name " + fileName);
+		
 		Element element = new Element(fileName, content);
 		cache.put(element);
 		return documentDatabaseCacheDAO.save(fileName, content);
@@ -130,14 +140,23 @@ public class DocumentMemoryCacheDAO implements IDocumentCacheDAO {
 		if (cache.isKeyInCache(fileName)) {
 			response = cache.remove(fileName);
 			response = documentDatabaseCacheDAO.delete(fileName);
+			LOG.info("File with name " + " was founded in memory cache level");
 		} else
 			response = false;
 
 		return response;
 	}
 
+	@Override
+	public List<String> getListFileName(boolean isFromCache) {
+		return documentDatabaseCacheDAO.getListFileName(isFromCache);
+	}
+	
 	@PreDestroy
 	private void shutdownService() {
 		CacheManager.getInstance().shutdown();
+		LOG.info("Shutdown service of cache memory level");
 	}
+
+	
 }

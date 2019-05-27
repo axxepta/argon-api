@@ -12,7 +12,9 @@ import de.axxepta.models.FileDescriptionModel;
 public interface IFileResourceService {
 
 	public boolean directUploadFile(URL fileURL, String nameFileUpload);
-
+	
+	public File createTempFileFromURL(String urlString);
+	
 	public String calculateHashSum(File file);
 
 	public List<File> listUploadedFiles();

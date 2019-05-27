@@ -3,6 +3,7 @@ package de.axxepta.basex;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -17,11 +18,14 @@ import org.basex.core.Context;
 import org.basex.core.Databases;
 import org.basex.core.cmd.CreateDB;
 import org.basex.core.cmd.DropDB;
+import org.basex.core.cmd.Get;
 import org.basex.core.cmd.InfoDB;
 import org.basex.core.cmd.Open;
+import org.basex.core.cmd.Set;
 import org.basex.core.users.User;
 import org.basex.core.users.Users;
 import org.basex.data.Data;
+import org.basex.index.name.Names;
 import org.basex.io.out.DataOutput;
 import org.basex.server.Sessions;
 import org.basex.util.list.StringList;
@@ -32,25 +36,18 @@ public class RunDirectCommands {
 
 	private Context ctx;
 	
-	public RunDirectCommands() {
+	RunDirectCommands() {
 		ctx = new Context();
+	}
+	
+	public String getPathDatabases(String databaseName) {
+		return ctx.soptions.dbPath(databaseName).dir();
 	}
 	
 	public String getInfoSessions() {
 		Sessions sessions = ctx.sessions;
 		String infoSessions = sessions.info();
 		return infoSessions;
-	}
-
-	public void uploadContextFile(byte [] byteArray, String databaseName) throws IOException {
-		new Open(databaseName).execute(ctx);
-		Data data = ctx.data();
-		OutputStream bOutStream = new ByteArrayOutputStream();
-		DataOutput out = new DataOutput(bOutStream);
-		out.write(byteArray);
-		
-		data.elemNames.write(out);
-		LOG.info("uploaded a file");
 	}
 	
 	public int numberElements(String databaseName) throws BaseXException{

@@ -4,9 +4,7 @@ import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -92,11 +90,10 @@ public class DatabasesResource{
 			@ApiResponse(responseCode = "500", description = "internal server error") })
 	@POST
 	@Path("create-database")
-	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response createDatabase(
-			@Parameter(description = "database name", required = true) @FormParam("database-name") String databaseName,
-			@Parameter(description = "file url that will be added to database") @FormParam("file-url") String fileURL)
+			@Parameter(description = "database name", required = true) @QueryParam("database-name") String databaseName,
+			@Parameter(description = "file url that will be added to database") @QueryParam("file-url") String fileURL)
 			throws ResponseException {
 		metricRegistry.mark();
 		if (!ValidationString.validationString(databaseName, "databaseName")) {
@@ -128,7 +125,7 @@ public class DatabasesResource{
 	@Path("delete-database")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response dropDatabase(
-			@Parameter(description = "database name",  required = true) String databaseName)
+			@Parameter(description = "database name",  required = true) @QueryParam("database-name") String databaseName)
 			throws ResponseException {
 		metricRegistry.mark();
 		if (!ValidationString.validationString(databaseName, "databaseName")) {
@@ -150,4 +147,5 @@ public class DatabasesResource{
 					.entity("Delete of database with name " + databaseName + " has encountered an error").build();
 		}
 	}
+
 }

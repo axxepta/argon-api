@@ -1,8 +1,12 @@
 package de.axxepta.dao.implementations;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
@@ -10,6 +14,7 @@ import javax.annotation.PreDestroy;
 import javax.inject.Singleton;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.ProcessingException;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -22,20 +27,19 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
-import org.apache.maven.shared.utils.io.FileUtils;
 import org.basex.core.BaseXException;
-import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 import org.jvnet.hk2.annotations.Service;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import de.axxepta.basex.RunDirectCommands;
+import de.axxepta.basex.RunDirectCommandsSingleton;
 import de.axxepta.dao.interfaces.IDocumentDAO;
-import de.axxepta.tools.ValidationDocs;
+import de.axxepta.listeners.RestDatabasePathContextListener;
 
 @Service(name = "BaseXDao")
 @Singleton
@@ -50,37 +54,25 @@ public class DocumentDAOImpl implements IDocumentDAO {
 	private String hostName;
 	private int port;
 	private String baseURL;
-	private String username;
-	private String password;
 
 	private Client client;
 
 	private RunDirectCommands runDirectCommands;
-	
+
 	@PostConstruct
 	public void initConnection() {
 		scheme = request.getScheme();
 		hostName = "localhost";
 		port = request.getLocalPort();
-		baseURL = "argon-server/argon-rest/rest";
 
-		username = "admin";
-		password = "admin";
+		baseURL = RestDatabasePathContextListener.getRestPath();
 
-		client = createClient(username, password);
+		LOG.info("base URL for BaseX " + baseURL);
+
+		client = ClientBuilder.newClient();
 		
-		runDirectCommands = new RunDirectCommands();
-	}
+		runDirectCommands = RunDirectCommandsSingleton.INSTANCE.getRunCommands();
 
-	private Client createClient(String usermane, String password) {
-		LOG.info("Create a client for username " + username);
-		HttpAuthenticationFeature feature = HttpAuthenticationFeature.basicBuilder().nonPreemptive()
-				.credentials(username, password).build();
-
-		ClientConfig clientConfig = new ClientConfig();
-		clientConfig.register(feature);
-		Client client = ClientBuilder.newClient(clientConfig);
-		return client;
 	}
 
 	@Override
@@ -123,35 +115,30 @@ public class DocumentDAOImpl implements IDocumentDAO {
 
 	@Override
 	public boolean test(String resource) {
-		HttpAuthenticationFeature feature = HttpAuthenticationFeature.basicBuilder().nonPreemptive()
-				.credentials(username, password).build();
+		
+		String resourceURL= composeURL(resource);
 
-		ClientConfig clientConfig = new ClientConfig();
-		clientConfig.register(feature);
-		String urlBaseX = composeURL(resource);
-		WebTarget webTarget = client.target(urlBaseX);
+		WebTarget webTarget = client.target(resourceURL);
 
-		if (webTarget == null) {
-			LOG.error("HTTP URL connection is null");
-			return false;
-		}
+		LOG.info("Web target URI " + webTarget.getUri());
+
 		Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN_TYPE);
-		Response response = invocationBuilder.get();
+
 		int code;
 		try {
+			Response response = invocationBuilder.get();
 			code = response.getStatus();
-		} catch (ProcessingException e) {
+		} catch (WebApplicationException | ProcessingException e) {
 			LOG.error(e.getMessage());
-			client.close();
 			return false;
 		}
 		LOG.info("Response is " + code);
-		client.close();
+		
 		if (code == 200)
 			return true;
 		else
 			return false;
-
+		
 	}
 
 	@Override
@@ -169,17 +156,27 @@ public class DocumentDAOImpl implements IDocumentDAO {
 		}
 
 		String databaseRESTfulURL = composeURL(databaseName);
-
-		WebTarget webTarget = client.target(databaseRESTfulURL + '/' + documentName);
+		String resourceURL = databaseRESTfulURL + '/' + documentName;
+		LOG.info("URL resource " + resourceURL);
+		
+		WebTarget webTarget = client.target(resourceURL);
 		Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_XML);
 		Response response = invocationBuilder.get();
 		int code = response.getStatus();
 		LOG.info("For upload XML file response is " + code);
-
+		
 		if (code == 200) {
 			File readFile = response.readEntity(File.class);
 			try {
 				Document doc = docBuilder.parse(readFile);
+
+				Node rootNode = doc.getFirstChild();
+
+				if (rootNode.getAttributes().getNamedItem("resources") != null
+						&& rootNode.getAttributes().getNamedItem("resources").getNodeValue().equals("0")) {
+					LOG.info("Document " + documentName + " not found in " + databaseName);
+					return null;
+				}
 				return doc;
 			} catch (SAXException | IOException e) {
 				LOG.error("Exception " + e.getMessage());
@@ -190,94 +187,66 @@ public class DocumentDAOImpl implements IDocumentDAO {
 			return null;
 		}
 	}
-	
-	@Override
-	public int uploadXMLDocument(File file, boolean withSchemaValidation, String databaseName) {
-		if (file == null || !file.exists() || !file.isFile()) {
-			LOG.info("file not exists or is a directory");
-			return 500;
-		}
 
-		if (withSchemaValidation) {
-			if (ValidationDocs.validateXMLSchema.isDocTypeValid(file)) {
-				LOG.error(file.getName() + " is not an XML document valid");
-				return 500;
-			}
-		} else {
-			if (ValidationDocs.validateXMLWithDOM.isDocTypeValid(file)) {
-				LOG.error(file.getName() + " is not an XML document valid");
-				return 500;
-			}
-		}
+	@Override
+	public synchronized int uploadXMLDocument(String nameUsedSave, InputStream documentStream, String databaseName) {
+
+		LOG.info("Try to upload in database file as " + nameUsedSave);
 
 		String databasePath = composeDatabasePath(databaseName);
 
-		if (databasePath == null)
+		if (databasePath == null) {
+			LOG.info("Database path null");
 			return 500;
+		}
 
-		String databaseRESTfulURL = composeURL(databaseName);
-		/*
-		 * String fileName =
-		 * nameFilePath.substring(nameFilePath.lastIndexOf(File.separator) + 1,
-		 * nameFilePath.length()); File to = new File(databasePath + File.separator +
-		 * fileName); try { Files.copy(file.toPath(), to.toPath()); } catch (IOException
-		 * e) { LOG.error("IOException " + e.getMessage()); return 500; }
-		 */
+		String resourceURL = composeURL(databaseName);
+		
+		resourceURL +=  "/" + nameUsedSave;
 
-		WebTarget webTarget = client.target(databaseRESTfulURL);
+		LOG.info("Database RESTful URL composed " + resourceURL);
 
-		String newName = getFileNameWithSHA(file);
-		if(newName == null)
+		WebTarget webTarget = client.target("http://localhost:8801/argon-rest/rest/test-name/" + "pigs.xml");
+
+		Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN);
+	
+		Response response = null;
+		
+		try {			
+			response = invocationBuilder.put(Entity.entity(documentStream, MediaType.APPLICATION_OCTET_STREAM_TYPE));
+		} catch (ProcessingException e) {
+			LOG.error("Exception  for obtain response " + e.getMessage());
 			return 500;
-		
-		File newFile = new File(getFileNameWithSHA(file));
-		
-		boolean succes = file.renameTo(newFile);
-		
-		if(!succes)
-			return 500;
-		
-		Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN_TYPE);
-		Response response = invocationBuilder.put(Entity.xml(file));
+		}
 
 		int code = response.getStatus();
 		LOG.info("For upload XML file response is " + code);
-		client.close();
-
 		return code;
 	}
 
-	//will be useful in document versioning
-	private String getFileNameWithSHA(File file) {
-		String fileName = file.getName();
-		String content;
-		try {
-			content = FileUtils.fileRead(file);
-		} catch (IOException e) {
-			return null;
-		}
-		return fileName + DigestUtils.sha256(content);
-	}
-	
 	@Override
 	public int deleteDocument(String fileName, String databaseName) {
 
 		String databasePath = composeDatabasePath(databaseName);
 
-		if (databasePath == null)
+		if (databasePath == null) {
+			LOG.info("Database path is null");
 			return 500;
+		}
 
 		String databaseRESTfulURL = composeURL(databaseName);
 
-		WebTarget webTarget = client.target(databaseRESTfulURL + '/' + fileName);
+		String urlDelete = databaseRESTfulURL + '/' + fileName;
+		LOG.info("URL delete " + urlDelete);
+		
+		WebTarget webTarget = client.target(urlDelete);
 
 		Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN_TYPE);
 		Response response = invocationBuilder.delete();
 		int code = response.getStatus();
 
 		LOG.info("For delete XML file response is " + code);
-		client.close();
-
+		
 		return code;
 
 	}
@@ -300,6 +269,7 @@ public class DocumentDAOImpl implements IDocumentDAO {
 			}
 		}
 		try {
+			LOG.info("Try to run directly commands to create database");
 			runDirectCommands.createDatabase(databaseName, file);
 		} catch (BaseXException e) {
 			LOG.error(e.getMessage());
@@ -324,27 +294,64 @@ public class DocumentDAOImpl implements IDocumentDAO {
 		return true;
 	}
 
-	private String composeURL(String resourceDatabase) {
-		return scheme + "://" + hostName + ':' + port + '/' + baseURL + '/' + resourceDatabase;
-	}
-	
-	private String composeDatabasePath(String databaseName) {
-		String databasePath = null;
-		if (showDatabases().containsKey(databaseName)) {
-			Map<String, String> propertiesDatabaseMap = showDatabases().get(databaseName);
-			String databasePathName = propertiesDatabaseMap.get("inputpath");
-			databasePath = databasePathName.substring(0, databasePathName.lastIndexOf(File.separator));
-			LOG.info("For database " + databaseName + " path is " + databasePath);
-			return databasePath;
-		} else {
-			LOG.info("database with name " + databaseName + " not exists");
+	@Override
+	public List<String> getAllFilesName(String databaseName) {
+		LOG.info("Get all files name stored in database with name " + databaseName);
+		String databaseURL = composeURL(databaseName);
+		LOG.info("Database URL " + databaseURL);
+		WebTarget webTarget = client.target(databaseURL);
+		Invocation.Builder invocationBuilder = webTarget.request(MediaType.TEXT_PLAIN);
+
+		Response response = invocationBuilder.get();
+
+		if (response.getStatus() != 200) {
+			LOG.info("Database " + databaseName + " cannot be open from REST");
 			return null;
 		}
+
+		String responseString = (String) response.readEntity(String.class);
+
+		LOG.info("response " + responseString);
+		
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+
+		factory.setNamespaceAware(true);
+		try {
+			DocumentBuilder builder = factory.newDocumentBuilder();
+			Document documentResponse = builder.parse(new ByteArrayInputStream(responseString.getBytes()));
+			NodeList nodes = documentResponse.getElementsByTagName("rest:resource");
+
+			LOG.info("Number of documents store in database " + databaseName + " " + nodes.getLength() + 1);
+			List<String> fileNameList = new ArrayList<>();
+
+			for (int i = 0; i < nodes.getLength(); i++) {
+				fileNameList.add(nodes.item(i).getTextContent());
+			}
+
+			return fileNameList;
+		} catch (ParserConfigurationException | SAXException | IOException e) {
+			LOG.error(e.getClass().getName() + " : " + e.getMessage());
+			return null;
+		}
+
+	}
+
+	private String composeURL(String resourceDatabase) {
+		String urlDatabase = scheme + "://" + hostName + ':' + port + '/' + baseURL + '/' + resourceDatabase;
+		LOG.info("Database URL " + urlDatabase);
+		return urlDatabase;
+	}
+
+	private String composeDatabasePath(String databaseName) {// used to check directly if database exists
+		String databasePath = runDirectCommands.getPathDatabases(databaseName);
+		LOG.info("Database path " + databasePath);
+		return databasePath;
 	}
 
 	@PreDestroy
 	private void close() {
+		client.close();
 		runDirectCommands.close();
 	}
-	
+
 }

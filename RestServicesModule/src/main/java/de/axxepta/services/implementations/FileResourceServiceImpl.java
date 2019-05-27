@@ -32,8 +32,14 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
 import org.jvnet.hk2.annotations.Service;
 
+import com.thaiopensource.xml.util.StringSplitter;
+
 import de.axxepta.models.FileDescriptionModel;
+import de.axxepta.properties.BuildResourceBinderReader;
+import de.axxepta.properties.ResourceBundleReader;
 import de.axxepta.services.interfaces.IFileResourceService;
+import de.axxepta.tools.ValidateURL;
+import ro.sync.basic.util.HTTPUtil;
 
 @Service(name = "FileServiceImplementation")
 @Singleton
@@ -102,6 +108,58 @@ public class FileResourceServiceImpl implements IFileResourceService {
 		return true;
 	}
 
+	@Override
+	public File createTempFileFromURL(String fileURLString) {
+		
+		if(!ValidateURL.validateURL.isURLValid(fileURLString)) {
+			LOG.error(fileURLString + " is not a valid URL");
+			return null;
+		}
+		
+		if(fileURLString.startsWith("file:/")) {//case in witch is a local file
+			String pathFile =fileURLString.substring(fileURLString.indexOf(":") + 1);
+			File file = new File(pathFile);
+			if(!file.exists()) {
+				LOG.error("File " + pathFile + " is a local one and not exist");
+				return null;
+			}
+			
+			return file;
+		}
+		
+		String initialFileName = fileURLString.substring(fileURLString.lastIndexOf('/') + 1);
+		LOG.info("Initial file name " + initialFileName);
+		File fileTmpUpload = null;
+		String prefixFile = FilenameUtils.removeExtension(initialFileName);
+		LOG.info("Try to upload file " + fileURLString.toString() + " as a temporal one");
+
+		try {
+			fileTmpUpload = File.createTempFile(prefixFile, ".tmp");
+		} catch (IOException e) {
+			LOG.error("Temp file cannot be created " + e.getMessage());
+			return null;
+		}
+			
+		try {
+			FileUtils.copyURLToFile(new URL(fileURLString), fileTmpUpload);
+		} catch (IOException e) {
+			LOG.error("Exception " + e.getClass().getName() + " " + e.getMessage());
+			return null;
+		}
+		
+		List<File> fileNameList;
+		if (tmpFileMap.containsKey(initialFileName)) {
+			fileNameList = tmpFileMap.get(initialFileName);
+			LOG.info("Version number " + (fileNameList.size() + 1) + " for file "+ initialFileName);
+		} else {
+			fileNameList = new ArrayList<>();
+		}
+		fileNameList.add(fileTmpUpload);
+		tmpFileMap.put(initialFileName, fileNameList);
+		
+		return fileTmpUpload;
+	}
+	
 	@Override
 	public String calculateHashSum(File file) {
 		String contentFile = null;
@@ -205,54 +263,30 @@ public class FileResourceServiceImpl implements IFileResourceService {
 		}
 
 		String fileURLString = fileURL.toString();
-		String initialFileName = fileURLString.substring(fileURLString.lastIndexOf('/') + 1, fileURLString.length());
+		String initialFileName = fileURLString.substring(fileURLString.lastIndexOf('/') + 1);
 		LOG.info("Initial file name " + initialFileName);
 		File fileUpload = null;
-		String prefixFile = FilenameUtils.removeExtension(initialFileName);
-		long startCopy = 0, endCopy = 0;
 		if (asTempFile) {
-			LOG.info("Try to upload file " + fileURL.toString() + " as a temporal one");
-
-			try {
-				fileUpload = File.createTempFile(prefixFile, ".tmp");
-			} catch (IOException e) {
-				LOG.error("Temp file cannot be created " + e.getMessage());
-				return null;
-			}
-			
-			startCopy = System.nanoTime();
-			try {
-				FileUtils.copyURLToFile(fileURL, fileUpload);
-			} catch (IOException e) {
-				LOG.error("Exception " + e.getClass().getName() + " " + e.getMessage());
-				return null;
-			}
-			endCopy = System.nanoTime();
-			List<File> fileNameList;
-			if (tmpFileMap.containsKey(initialFileName)) {
-				fileNameList = tmpFileMap.get(initialFileName);
-				LOG.info("Version number " + (fileNameList.size() + 1) + " for file "+ initialFileName);
-			} else {
-				fileNameList = new ArrayList<>();
-			}
-			fileNameList.add(fileUpload);
-			tmpFileMap.put(initialFileName, fileNameList);
+			fileUpload = createTempFileFromURL(fileURLString);
 		} else {
 			LOG.info("Try to upload file " + fileURL.toString() + " in upload directory");
 			if (existFileStored(initialFileName)) {
-				LOG.error("File already exist in upload directory");
-				return null;
+				File oldFile = new File(dataDir + File.separator + initialFileName);
+				boolean isDeleted = oldFile.delete();
+				if(!isDeleted) {
+					LOG.error("Old file cannot be deleted");
+					return null;
+				}
 			}
 			fileUpload = new File(dataDir + File.separator + initialFileName);
 			try {
 				FileUtils.copyURLToFile(fileURL, fileUpload);
+				LOG.info("Content of the file was updaded from " + fileURL);
 			} catch (IOException e) {
 				LOG.error("Exception " + e.getClass().getName() + " " + e.getMessage());
 				return null;
 			}
-			endCopy = System.nanoTime();
 		}
-		LOG.info("Time for effectively copy is " + (endCopy - startCopy) + " nanoseconds");
 
 		URL tempFileURL = null;
 		try {
@@ -278,6 +312,13 @@ public class FileResourceServiceImpl implements IFileResourceService {
 		return fileDescription;
 	}
 
+	private byte[] getFileFromUrl(URL url) throws IOException {
+		return HTTPUtil.getContentOfPage(url);
+	}
+		
+	private String[] splitterModel(String content) {
+		return StringSplitter.split(content);
+	}
 	
 	@PreDestroy
 	private void clear() {

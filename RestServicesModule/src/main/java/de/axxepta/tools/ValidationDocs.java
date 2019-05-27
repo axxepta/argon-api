@@ -23,9 +23,11 @@ import org.codehaus.stax2.validation.XMLValidationSchemaFactory;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import de.axxepta.tools.interfaces.IDomFromString;
 import de.axxepta.tools.interfaces.IValidationDocs;
 
 public class ValidationDocs {
@@ -47,9 +49,10 @@ public class ValidationDocs {
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder dBuilder;
 
-		try {
+		try (StringReader stringReader = new StringReader(fileContent);){
 			dBuilder = dbFactory.newDocumentBuilder();
-			dBuilder.parse(new InputSource(new StringReader(fileContent)));
+			InputSource inputSource= new InputSource(new StringReader(fileContent));
+			dBuilder.parse(inputSource);
 			return true;
 		} catch (SAXException | IOException | ParserConfigurationException e) {
 			LOG.error(e.getClass() + ": " + e.getMessage());
@@ -58,6 +61,27 @@ public class ValidationDocs {
 		return false;
 	};
 
+	public static IValidationDocs validateXMLWithDOMSecond = (file) -> {
+		String fileContent = null;
+		try {
+			fileContent = FileUtils.readFileToString(file, "UTF-8");
+		} catch (IOException e) {
+			LOG.error(e.getClass() + ": " + e.getMessage());
+			return false;
+		}
+		
+		Document doc = DomFromStringContent.domFromString.getDOM(fileContent);
+		
+		if(doc == null) {
+			LOG.error("null document object");
+			return false;
+		}
+		
+		LOG.info(file.getName() + " is XML valid");
+		
+		return true;
+	};
+	
 	public static IValidationDocs validateXMLSchema = (file) -> {
 
 		InputStream xmlInputStream = null;

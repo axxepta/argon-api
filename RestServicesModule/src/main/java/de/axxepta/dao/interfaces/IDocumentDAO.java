@@ -1,6 +1,7 @@
 package de.axxepta.dao.interfaces;
 
-import java.io.File;
+import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 
 import org.jvnet.hk2.annotations.Contract;
@@ -23,8 +24,10 @@ public interface IDocumentDAO {
 	
 	public Document readXMLDocument(String documentName, String databaseName);
 	
-	public int uploadXMLDocument(File documentName, boolean withSchemaValidation, String databaseName);
+	public int uploadXMLDocument(String nameUsedSave, InputStream documentStream, String databaseName);
 	
 	public int deleteDocument(String fileName, String databaseName);
 
+	public List<String> getAllFilesName(String databaseName);
+	
 }

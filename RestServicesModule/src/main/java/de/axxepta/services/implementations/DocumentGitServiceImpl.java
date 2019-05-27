@@ -141,7 +141,7 @@ public class DocumentGitServiceImpl implements IDocumentGitService {
 		}
 		List<String> branchesNameList = new ArrayList<>();
 		for (Ref ref : refs) {
-			branchesNameList.add(ref.getName().substring(ref.getName().lastIndexOf("/") + 1, ref.getName().length()));
+			branchesNameList.add(ref.getName().substring(ref.getName().lastIndexOf("/") + 1));
 		}
 		LOG.info("Head names list for repository have size " + branchesNameList.size());
 		return branchesNameList;
