@@ -34,12 +34,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.axxepta.dao.interfaces.IDocumentCacheDAO;
-import de.axxepta.dao.interfaces.IDocumentDAO;
 import de.axxepta.exceptions.ResponseException;
 import de.axxepta.models.FileDescriptionModel;
 import de.axxepta.models.FileDisplayModel;
 import de.axxepta.services.interfaces.IFileResourceService;
-import de.axxepta.tools.ExtractContentFile;
 import de.axxepta.tools.GetContentOfURL;
 import de.axxepta.tools.ValidationString;
 import io.swagger.v3.oas.annotations.Operation;

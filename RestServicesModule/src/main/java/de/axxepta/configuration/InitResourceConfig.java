@@ -3,10 +3,6 @@ package de.axxepta.configuration;
 import java.io.File;
 import java.util.Locale;
 
-import javax.servlet.ServletRequest;
-import javax.ws.rs.core.Context;
-
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.message.DeflateEncoder;

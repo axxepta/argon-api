@@ -1,6 +1,5 @@
 package de.axxepta.configuration;
 
-import javax.servlet.ServletRequest;
 import javax.ws.rs.core.Context;
 
 import org.apache.log4j.Logger;

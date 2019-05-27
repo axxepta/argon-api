@@ -1,9 +1,5 @@
 package de.axxepta.listeners;
 
-import java.util.Map;
-import java.util.Map.Entry;
-
-import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletRegistration;

@@ -1,10 +1,6 @@
 package de.axxepta.basex;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,15 +14,11 @@ import org.basex.core.Context;
 import org.basex.core.Databases;
 import org.basex.core.cmd.CreateDB;
 import org.basex.core.cmd.DropDB;
-import org.basex.core.cmd.Get;
 import org.basex.core.cmd.InfoDB;
 import org.basex.core.cmd.Open;
-import org.basex.core.cmd.Set;
 import org.basex.core.users.User;
 import org.basex.core.users.Users;
 import org.basex.data.Data;
-import org.basex.index.name.Names;
-import org.basex.io.out.DataOutput;
 import org.basex.server.Sessions;
 import org.basex.util.list.StringList;
 
