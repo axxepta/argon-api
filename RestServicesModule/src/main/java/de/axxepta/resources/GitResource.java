@@ -25,8 +25,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.log4j.Logger;
 import org.glassfish.jersey.server.ManagedAsync;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.Meter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,7 +44,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 @Path("git-services")
 public class GitResource {
 
-	private static final Logger LOG = Logger.getLogger(GitResource.class);
+	private static final Logger LOG = LoggerFactory.getLogger(GitResource.class);
 
 	@Inject
 	private Meter metricRegistry;

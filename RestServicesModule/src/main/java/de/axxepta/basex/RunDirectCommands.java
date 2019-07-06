@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
 import org.basex.core.BaseXException;
 import org.basex.core.Context;
 import org.basex.core.Databases;
@@ -21,10 +20,12 @@ import org.basex.core.users.Users;
 import org.basex.data.Data;
 import org.basex.server.Sessions;
 import org.basex.util.list.StringList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RunDirectCommands {
 
-	private static final Logger LOG = Logger.getLogger(RunDirectCommands.class);
+	private static final Logger LOG = LoggerFactory.getLogger(RunDirectCommands.class);
 
 	private Context ctx;
 	

@@ -12,11 +12,12 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SerializeObjectUtil {
 
-	private static final Logger LOG = Logger.getLogger(SerializeObjectUtil.class);
+	private static final Logger LOG = LoggerFactory.getLogger(SerializeObjectUtil.class);
 	
 	public static byte[] serialize(Object obj, String key) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
 		EncryptAES encrypt = new EncryptAES(key);

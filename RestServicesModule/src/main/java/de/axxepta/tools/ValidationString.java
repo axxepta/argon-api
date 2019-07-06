@@ -1,12 +1,13 @@
 package de.axxepta.tools;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.axxepta.tools.interfaces.IValidationString;
 
 public class ValidationString implements IValidationString{
 	
-	private static final Logger LOG = Logger.getLogger(ValidationString.class);
+	private static final Logger LOG = LoggerFactory.getLogger(ValidationString.class);
 	
 	private static final int LONG_LENGTH = (int) Math.pow(2, 31) - 1000;
 	

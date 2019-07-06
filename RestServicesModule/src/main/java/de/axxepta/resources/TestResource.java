@@ -12,7 +12,8 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.annotation.Metric;
@@ -25,7 +26,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 @Singleton
 public class TestResource {
 
-	private static final Logger LOG = Logger.getLogger(TestResource.class);
+	private static final Logger LOG = LoggerFactory.getLogger(TestResource.class);
 
 	private Meter metricRegistry;
 

@@ -20,10 +20,11 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.apache.log4j.Logger;
 import org.basex.core.BaseXException;
 import org.jetbrains.annotations.NotNull;
 import org.jvnet.hk2.annotations.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
 import de.axxepta.basex.RunDirectCommands;
@@ -46,7 +47,7 @@ import jetbrains.exodus.env.TransactionalExecutable;
 @Singleton
 public class DocumentDBCacheDAOImpl implements IDocumentCacheDAO {
 
-	private static final Logger LOG = Logger.getLogger(DocumentDBCacheDAOImpl.class);
+	private static final Logger LOG = LoggerFactory.getLogger(DocumentDBCacheDAOImpl.class);
 
 	public static final String STORE_DOCUMENTS_PATH_DB = System.getProperty("user.dir") + File.separator
 			+ "RestServicesModule" + File.separator + "xodus-db" + File.separator + ".store-documents-xodus";

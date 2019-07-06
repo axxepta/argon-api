@@ -9,12 +9,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
 public class DomFromStringContentParallel {
 
-	private static final Logger LOG = Logger.getLogger(DomFromStringContentParallel.class);
+	private static final Logger LOG = LoggerFactory.getLogger(DomFromStringContentParallel.class);
+	
 	private ExecutorService executor;
 	
 	public DomFromStringContentParallel(int x) {

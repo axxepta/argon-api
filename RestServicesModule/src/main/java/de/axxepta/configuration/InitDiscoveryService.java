@@ -3,7 +3,9 @@ package de.axxepta.configuration;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.glassfish.hk2.api.ActiveDescriptor;
 import org.glassfish.hk2.api.DynamicConfigurationService;
 import org.glassfish.hk2.api.MultiException;
@@ -14,7 +16,7 @@ import org.glassfish.hk2.utilities.DuplicatePostProcessor;
 
 public class InitDiscoveryService {
 
-	private static final Logger LOG = Logger.getLogger(InitDiscoveryService.class);
+	private static final Logger LOG = LoggerFactory.getLogger(InitDiscoveryService.class);
 			
 	public static void initDiscoveryService(ServiceLocator locator, ClassLoader classLoader) {		
 		DynamicConfigurationService dcs = locator.getService(DynamicConfigurationService.class);		

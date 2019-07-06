@@ -22,7 +22,6 @@ import javax.ws.rs.core.Context;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.log4j.Logger;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.PushCommand;
 import org.eclipse.jgit.api.errors.ConcurrentRefUpdateException;
@@ -45,6 +44,8 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.jvnet.hk2.annotations.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.axxepta.models.UserAuthModel;
 import de.axxepta.services.interfaces.IDocumentGitService;
@@ -55,7 +56,7 @@ import gitdb.integration.GitDB;
 @Singleton
 public class DocumentGitServiceImpl implements IDocumentGitService {
 
-	private static final Logger LOG = Logger.getLogger(DocumentGitServiceImpl.class);
+	private static final Logger LOG = LoggerFactory.getLogger(DocumentGitServiceImpl.class);
 
 	private Map<String, Repository> repositoryCloneMap;
 

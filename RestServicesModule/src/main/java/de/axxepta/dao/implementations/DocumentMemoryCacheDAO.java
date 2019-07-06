@@ -9,8 +9,9 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.apache.log4j.Logger;
 import org.jvnet.hk2.annotations.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.axxepta.dao.interfaces.IDocumentCacheDAO;
 import de.axxepta.properties.BuildResourceBinderReader;
@@ -26,7 +27,7 @@ public class DocumentMemoryCacheDAO implements IDocumentCacheDAO {
 
 	private Cache cache;
 
-	private static final Logger LOG = Logger.getLogger(DocumentMemoryCacheDAO.class);
+	private static final Logger LOG = LoggerFactory.getLogger(DocumentMemoryCacheDAO.class);
 
 	@Inject
 	@Named("DocumentDatabaseCacheDAO")

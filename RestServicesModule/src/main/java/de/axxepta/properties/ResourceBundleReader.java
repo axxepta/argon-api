@@ -6,13 +6,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ResourceBundleReader {
 		
 		private final ResourceBundle resourceBundle;
 		
-		private static final Logger LOG = Logger.getLogger(ResourceBundleReader.class);
+		private static final Logger LOG = LoggerFactory.getLogger(ResourceBundleReader.class);
 		
 		public ResourceBundleReader(File fileResource, Locale localeSufix) {
 			resourceBundle = ResourceBundle.getBundle(fileResource.getPath(), localeSufix);

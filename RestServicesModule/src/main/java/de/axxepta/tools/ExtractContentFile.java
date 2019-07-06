@@ -5,8 +5,6 @@ import java.io.IOException;
 
 import org.codehaus.plexus.util.FileUtils;
 
-import ro.sync.basic.util.HTTPUtil;
-
 public class ExtractContentFile {
 	
 	private final File file;

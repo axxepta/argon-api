@@ -2,8 +2,6 @@ package de.axxepta.tools;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import org.eclipse.wst.xml.xpath2.processor.DOMBuilder;
 import org.eclipse.wst.xml.xpath2.processor.DOMLoaderException;

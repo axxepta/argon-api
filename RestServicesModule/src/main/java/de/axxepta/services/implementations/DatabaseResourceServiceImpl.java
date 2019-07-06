@@ -8,8 +8,9 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
 import org.jvnet.hk2.annotations.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.axxepta.dao.interfaces.IDocumentCacheDAO;
 import de.axxepta.dao.interfaces.IDocumentDAO;
@@ -19,7 +20,7 @@ import de.axxepta.services.interfaces.IDatabaseResourceService;
 @Singleton
 public class DatabaseResourceServiceImpl implements IDatabaseResourceService {
 
-	private static final Logger LOG = Logger.getLogger(DatabaseResourceServiceImpl.class);
+	private static final Logger LOG = LoggerFactory.getLogger(DatabaseResourceServiceImpl.class);
 
 	@Inject
 	@Named("BaseXDao")

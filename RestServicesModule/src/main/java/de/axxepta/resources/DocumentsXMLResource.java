@@ -18,8 +18,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.io.FilenameUtils;
-import org.apache.log4j.Logger;
 import org.codehaus.plexus.util.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
 import com.codahale.metrics.Meter;
@@ -37,7 +38,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 @Path("document-xml-services")
 public class DocumentsXMLResource {
 
-	private static final Logger LOG = Logger.getLogger(DocumentsXMLResource.class);
+	private static final Logger LOG = LoggerFactory.getLogger(DocumentsXMLResource.class);
 
 	@Inject
 	private Meter metricRegistry;

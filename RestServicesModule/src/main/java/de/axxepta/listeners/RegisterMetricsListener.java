@@ -7,7 +7,8 @@ import java.util.concurrent.TimeUnit;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.MetricFilter;
@@ -22,7 +23,7 @@ import de.axxepta.health.DatabaseHealth;
 
 public class RegisterMetricsListener implements ServletContextListener {
 
-	private static final Logger LOG = Logger.getLogger(RegisterMetricsListener.class);
+	private static final Logger LOG = LoggerFactory.getLogger(RegisterMetricsListener.class);
 
 	public static final MetricRegistry metric = new MetricRegistry();
 	

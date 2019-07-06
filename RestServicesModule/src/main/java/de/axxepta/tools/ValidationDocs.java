@@ -16,23 +16,23 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
 import org.codehaus.stax2.XMLStreamReader2;
 import org.codehaus.stax2.validation.XMLValidationSchema;
 import org.codehaus.stax2.validation.XMLValidationSchemaFactory;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-import de.axxepta.tools.interfaces.IDomFromString;
 import de.axxepta.tools.interfaces.IValidationDocs;
 
 public class ValidationDocs {
 
-	private static final Logger LOG = Logger.getLogger(ValidationDocs.class);
+	private static final Logger LOG = LoggerFactory.getLogger(ValidationDocs.class);
 
 	private final static String URL_SCHEMA_VALIDATION = "https://www.w3.org/2009/XMLSchema/XMLSchema.xsd";
 	

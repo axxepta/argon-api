@@ -4,11 +4,12 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletRegistration;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RestDatabasePathContextListener implements ServletContextListener {
 
-	private static final Logger LOG = Logger.getLogger(RestDatabasePathContextListener.class);
+	private static final Logger LOG = LoggerFactory.getLogger(RestDatabasePathContextListener.class);
 
 	private static String restPath;
 

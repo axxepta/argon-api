@@ -1,6 +1,7 @@
 package de.axxepta.basex;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public enum RunDirectCommandsSingleton
 {
@@ -8,7 +9,7 @@ public enum RunDirectCommandsSingleton
 
     private final RunDirectCommands commands;
     
-    private final Logger logger = Logger.getLogger(RunDirectCommandsSingleton.class);
+    private final Logger logger = LoggerFactory.getLogger(RunDirectCommandsSingleton.class);
     
     private RunDirectCommandsSingleton(){
         commands = new RunDirectCommands();

@@ -1,8 +1,5 @@
 package gitdb.integration;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
-
 /*
  * Copyright 2017-2018 E257.FI
  *

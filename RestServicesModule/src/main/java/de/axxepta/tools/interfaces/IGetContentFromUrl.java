@@ -5,5 +5,4 @@ import java.net.URL;
 public interface IGetContentFromUrl {
 
 	public String getContent (URL url);
-	
 }

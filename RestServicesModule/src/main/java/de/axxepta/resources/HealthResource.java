@@ -17,11 +17,12 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.log4j.Logger;
 import org.glassfish.jersey.server.monitoring.ExecutionStatistics;
 import org.glassfish.jersey.server.monitoring.MonitoringStatistics;
 import org.glassfish.jersey.server.monitoring.ResourceStatistics;
 import org.glassfish.jersey.server.monitoring.ResponseStatistics;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.health.HealthCheck.Result;
@@ -40,7 +41,7 @@ import ro.sync.basic.util.JreDetector;
 @Path("health")
 public class HealthResource{
 
-	private static final Logger LOG = Logger.getLogger(HealthResource.class);
+	private static final Logger LOG = LoggerFactory.getLogger(HealthResource.class);
 
 	@Inject
 	private Provider<MonitoringStatistics> monitoringStatistics;

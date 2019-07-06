@@ -14,7 +14,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.Meter;
 
@@ -29,7 +30,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 @Path("databases-services")
 public class DatabasesResource{
 
-	private static final Logger LOG = Logger.getLogger(DatabasesResource.class);
+	private static final Logger LOG = LoggerFactory.getLogger(DatabasesResource.class);
 
 	@Inject
 	private Meter metricRegistry;

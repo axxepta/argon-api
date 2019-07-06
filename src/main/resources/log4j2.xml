@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Configuration status="WARN">
+	<Appenders>
+		<RollingFile name="fileLogger"
+			fileName="logs/rest-argon-server.log"
+			filePattern="logs/rest-argon-server-%d{yyyy-MM-dd}.log">
+			<PatternLayout>
+				<pattern>%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n</pattern>
+			</PatternLayout>
+			
+			<Policies>
+				<SizeBasedTriggeringPolicy size="300KB" />
+			</Policies>
+			<DefaultRolloverStrategy max="10" />
+		</RollingFile>
+
+		<Console name="console" target="SYSTEM_OUT">
+			<PatternLayout
+				pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n" />
+		</Console>
+	</Appenders>
+
+	<Loggers>
+		<Logger name="de.axxepta" level="debug"/>
+		
+		<Root level="info" additivity="true">		
+			<AppenderRef ref="fileLogger" />
+			<AppenderRef ref="console" />
+		</Root>
+	</Loggers>
+</Configuration>

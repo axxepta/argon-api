@@ -26,8 +26,9 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.log4j.Logger;
 import org.codehaus.plexus.util.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.Meter;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -48,7 +49,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 @Path("document-services")
 public class DocumentsResource {
 
-	private static final Logger LOG = Logger.getLogger(DocumentsResource.class);
+	private static final Logger LOG = LoggerFactory.getLogger(DocumentsResource.class);
 
 	@Inject
 	private Meter metricRegistry;

@@ -28,9 +28,10 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.io.FilenameUtils;
-import org.apache.log4j.Logger;
 import org.basex.core.BaseXException;
 import org.jvnet.hk2.annotations.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -45,7 +46,7 @@ import de.axxepta.listeners.RestDatabasePathContextListener;
 @Singleton
 public class DocumentDAOImpl implements IDocumentDAO {
 
-	private static final Logger LOG = Logger.getLogger(DocumentDAOImpl.class);
+	private static final Logger LOG = LoggerFactory.getLogger(DocumentDAOImpl.class);
 
 	@Context
 	private HttpServletRequest request;

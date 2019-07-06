@@ -22,9 +22,10 @@ import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.apache.log4j.Logger;
 import org.castor.xmlctf.xmldiff.XMLDiff;
 import org.jvnet.hk2.annotations.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -44,7 +45,7 @@ import de.axxepta.tools.ValidationDocs;
 @Singleton
 public class HandlingFileDOM implements IHandlingFileDOM {
 
-	private static final Logger LOG = Logger.getLogger(HandlingFileDOM.class);
+	private static final Logger LOG = LoggerFactory.getLogger(HandlingFileDOM.class);
 
 	private DomFromStringContentParallel domFromStringParallel;
 

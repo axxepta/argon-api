@@ -7,7 +7,8 @@ import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.swagger.v3.jaxrs2.integration.JaxrsOpenApiContextBuilder;
 import io.swagger.v3.oas.integration.OpenApiConfigurationException;
@@ -21,7 +22,7 @@ public class ArgonSwaggerBootstrap extends HttpServlet {
 
 	private static final long serialVersionUID = 4736060928479268649L;
 
-	private static final Logger LOG = Logger.getLogger(ArgonSwaggerBootstrap.class);
+	private static final Logger LOG = LoggerFactory.getLogger(ArgonSwaggerBootstrap.class);
 
 	private String packageName = "de.axxepta.sample";
 	

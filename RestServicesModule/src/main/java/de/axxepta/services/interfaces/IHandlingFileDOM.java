@@ -3,7 +3,6 @@ package de.axxepta.services.interfaces;
 import java.io.File;
 import java.util.Map;
 
-import org.apache.xalan.xsltc.DOM;
 import org.jvnet.hk2.annotations.Contract;
 import org.w3c.dom.Document;
 

@@ -29,14 +29,13 @@ import javax.xml.bind.DatatypeConverter;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.log4j.Logger;
 import org.jvnet.hk2.annotations.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.thaiopensource.xml.util.StringSplitter;
 
 import de.axxepta.models.FileDescriptionModel;
-import de.axxepta.properties.BuildResourceBinderReader;
-import de.axxepta.properties.ResourceBundleReader;
 import de.axxepta.services.interfaces.IFileResourceService;
 import de.axxepta.tools.ValidateURL;
 import ro.sync.basic.util.HTTPUtil;
@@ -45,7 +44,7 @@ import ro.sync.basic.util.HTTPUtil;
 @Singleton
 public class FileResourceServiceImpl implements IFileResourceService {
 
-	private static final Logger LOG = Logger.getLogger(FileResourceServiceImpl.class);
+	private static final Logger LOG = LoggerFactory.getLogger(FileResourceServiceImpl.class);
 
 	@Context
 	private ServletContext servletContext;
