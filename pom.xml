@@ -28,7 +28,7 @@
 
 		<artifact.id.property>argon-server</artifact.id.property>
 
-		<apache.log.version>2.11.2</apache.log.version>
+		<apache.log.version>2.16.0</apache.log.version>
 		<slf4j.version>1.7.26</slf4j.version>
 	</properties>
 
